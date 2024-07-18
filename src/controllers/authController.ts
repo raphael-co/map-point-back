@@ -58,3 +58,23 @@ export const loginController = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
+export const getUserController = async (req: Request, res: Response) => {
+    const userId = req.user;
+
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query<RowDataPacket[]>('SELECT id, username, email, gender FROM users WHERE id = ?', [userId]);
+        connection.release();
+
+        if (rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'User not found' });
+        }
+
+        const user = rows[0];
+        res.status(200).json({ status: 'success', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
