@@ -1,3 +1,4 @@
+// src/utils/databaseInit.ts
 import pool from "./dbConnection";
 
 const checkTableExists = async (tableName: string) => {
@@ -51,12 +52,22 @@ CREATE TABLE IF NOT EXISTS followings (
     FOREIGN KEY (following_id) REFERENCES users(id)
 )`;
 
+const createPushTokensTable = `
+CREATE TABLE IF NOT EXISTS PushTokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`;
+
 export const initializeDatabase = async () => {
     const connection = await pool.getConnection();
     try {
         const usersTableExists = await checkTableExists('users');
         const followersTableExists = await checkTableExists('followers');
         const followingsTableExists = await checkTableExists('followings');
+        const pushTokensTableExists = await checkTableExists('PushTokens');
 
         if (!usersTableExists) {
             await connection.query(createUsersTable);
@@ -77,6 +88,13 @@ export const initializeDatabase = async () => {
             console.log("Followings table created successfully");
         } else {
             console.log("Followings table already exists");
+        }
+
+        if (!pushTokensTableExists) {
+            await connection.query(createPushTokensTable);
+            console.log("PushTokens table created successfully");
+        } else {
+            console.log("PushTokens table already exists");
         }
     } catch (error) {
         console.error("Error initializing database: ", error);
