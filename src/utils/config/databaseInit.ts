@@ -1,4 +1,3 @@
-// src/utils/databaseInit.ts
 import pool from "./dbConnection";
 
 const checkTableExists = async (tableName: string) => {
@@ -33,7 +32,6 @@ CREATE TABLE IF NOT EXISTS users (
     connection_type ENUM('mail', 'google', 'ios') NOT NULL
 )`;
 
-
 const createFollowersTable = `
 CREATE TABLE IF NOT EXISTS followers (
     user_id INT NOT NULL,
@@ -58,9 +56,16 @@ const createPushTokensTable = `
 CREATE TABLE IF NOT EXISTS PushTokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`;
+
+const createUserPushTokensTable = `
+CREATE TABLE IF NOT EXISTS UserPushTokens (
     user_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    push_token_id INT NOT NULL,
+    PRIMARY KEY (user_id, push_token_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (push_token_id) REFERENCES PushTokens(id)
 )`;
 
 export const initializeDatabase = async () => {
@@ -70,6 +75,7 @@ export const initializeDatabase = async () => {
         const followersTableExists = await checkTableExists('followers');
         const followingsTableExists = await checkTableExists('followings');
         const pushTokensTableExists = await checkTableExists('PushTokens');
+        const userPushTokensTableExists = await checkTableExists('UserPushTokens');
 
         if (!usersTableExists) {
             await connection.query(createUsersTable);
@@ -97,6 +103,13 @@ export const initializeDatabase = async () => {
             console.log("PushTokens table created successfully");
         } else {
             console.log("PushTokens table already exists");
+        }
+
+        if (!userPushTokensTableExists) {
+            await connection.query(createUserPushTokensTable);
+            console.log("UserPushTokens table created successfully");
+        } else {
+            console.log("UserPushTokens table already exists");
         }
     } catch (error) {
         console.error("Error initializing database: ", error);

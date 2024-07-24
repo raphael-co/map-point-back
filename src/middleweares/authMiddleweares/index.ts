@@ -30,9 +30,6 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
 export const validateRegister = (req: Request, res: Response, next: NextFunction) => {
     const { username, emailAddresses, password, gender } = req.body;
 
-    console.log(req.body);
-    console.log(emailAddresses);
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/;
 

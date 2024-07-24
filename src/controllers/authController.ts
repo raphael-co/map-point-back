@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { RowDataPacket } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import dotenv from 'dotenv';
 import { OAuth2Client } from 'google-auth-library';
@@ -22,21 +22,31 @@ if (!GOOGLE_CLIENT_ID) {
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 export const registerController = async (req: Request, res: Response) => {
-    const { username, emailAddresses, password, gender, connectionType } = req.body;
+    const { username, emailAddresses, password, gender } = req.body;
 
     try {
         const connection = await pool.getConnection();
         const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [emailAddresses]);
+        
         if (rows.length > 0) {
             connection.release();
             return res.status(400).json({ status: 'error', message: 'User already exists' });
         }
 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
-        await connection.query('INSERT INTO users (username, email, password, gender, connection_type) VALUES (?, ?, ?, ?, ?)', 
-            [username, emailAddresses, hashedPassword, gender, connectionType]);
+
+        const [result] = await connection.query<ResultSetHeader>('INSERT INTO users (username, email, password, gender, connection_type) VALUES (?, ?, ?, ?, ?)', 
+            [username, emailAddresses, hashedPassword, gender, 'mail']);
+        
         connection.release();
-        res.status(201).json({ status: 'success', message: 'User registered successfully' });
+
+        // Vérifiez si l'insertion a réussi et récupérez l'ID inséré
+        const userId = result.insertId;
+
+        // Générer un jeton JWT pour l'utilisateur nouvellement créé
+        const jwtToken = jwt.sign({ id: userId, email: emailAddresses }, SECRET_KEY, { expiresIn: '1h' });
+        
+        res.status(201).json({ status: 'success', message: 'User registered successfully', token: jwtToken });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
