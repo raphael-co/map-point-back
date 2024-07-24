@@ -4,17 +4,25 @@ import jwt from 'jsonwebtoken';
 import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import dotenv from 'dotenv';
+import { OAuth2Client } from 'google-auth-library';
 
 dotenv.config();
 
 const SECRET_KEY = process.env.SECRET_KEY;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
 if (!SECRET_KEY) {
     throw new Error("SECRET_KEY is not defined in the environment variables");
 }
 
+if (!GOOGLE_CLIENT_ID) {
+    throw new Error("GOOGLE_CLIENT_ID is not defined in the environment variables");
+}
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
 export const registerController = async (req: Request, res: Response) => {
-    const { username, emailAddresses, password, gender } = req.body;
+    const { username, emailAddresses, password, gender, connectionType } = req.body;
 
     try {
         const connection = await pool.getConnection();
@@ -24,8 +32,9 @@ export const registerController = async (req: Request, res: Response) => {
             return res.status(400).json({ status: 'error', message: 'User already exists' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await connection.query('INSERT INTO users (username, email, password, gender) VALUES (?, ?, ?, ?)', [username, emailAddresses, hashedPassword, gender]);
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+        await connection.query('INSERT INTO users (username, email, password, gender, connection_type) VALUES (?, ?, ?, ?, ?)', 
+            [username, emailAddresses, hashedPassword, gender, connectionType]);
         connection.release();
         res.status(201).json({ status: 'success', message: 'User registered successfully' });
     } catch (error) {
@@ -73,6 +82,42 @@ export const getUserController = async (req: Request, res: Response) => {
 
         const user = rows[0];
         res.status(200).json({ status: 'success', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+export const googleAuthController = async (req: Request, res: Response) => {
+    const { token } = req.body;
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+
+        if (!payload) {
+            return res.status(400).json({ status: 'error', message: 'Invalid token' });
+        }
+
+        const { sub: googleId, email, name, picture } = payload;
+
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
+        
+        if (rows.length === 0) {
+            await connection.query('INSERT INTO users (username, email, password, profile_picture, connection_type) VALUES (?, ?, ?, ?, ?)', 
+                [name, email, null, picture, 'google']);
+        }
+
+        const [userRows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
+        const user = userRows[0];
+        connection.release();
+
+        const jwtToken = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
+        res.status(200).json({ status: 'success', token: jwtToken, user: { id: user.id, email: user.email, username: user.username, profilePicture: user.profile_picture } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
