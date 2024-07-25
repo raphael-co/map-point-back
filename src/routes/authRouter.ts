@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticateToken, validateLogin, validateRegister } from '../middleweares/authMiddleweares';
-import { getUserController, loginController, registerController } from '../controllers/authController';
+import { validateLogin, validateRegister } from '../middleweares/authMiddleweares';
+import { bulkRegisterController, loginController, registerController } from '../controllers/authController';
 
 
 
@@ -8,7 +8,6 @@ const authRouter = Router();
 
 authRouter.post('/register', validateRegister, registerController);
 authRouter.post('/login', validateLogin, loginController);
-authRouter.get('/user', authenticateToken, getUserController);
-
+authRouter.post('/bulk-register', bulkRegisterController);
 
 export default authRouter;
