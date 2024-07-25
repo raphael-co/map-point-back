@@ -19,12 +19,46 @@ const checkTableExists = async (tableName: string) => {
     }
 };
 
+const checkColumnExists = async (tableName: string, columnName: string) => {
+    const connection = await pool.getConnection();
+    try {
+        const [rows] = await connection.query<any[]>(
+            `SELECT COLUMN_NAME 
+            FROM information_schema.columns 
+            WHERE table_schema = DATABASE() 
+            AND table_name = ? 
+            AND column_name = ?`,
+            [tableName, columnName]
+        );
+        return rows.length > 0;
+    } catch (error) {
+        console.error(`Error checking column ${columnName} in table ${tableName}:`, error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+};
+
+const addColumnToTable = async (tableName: string, columnDefinition: string) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.query(`ALTER TABLE ${tableName} ADD ${columnDefinition}`);
+        console.log(`Column ${columnDefinition} added to ${tableName} successfully`);
+    } catch (error) {
+        console.error(`Error adding column ${columnDefinition} to table ${tableName}:`, error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+};
+
 const createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255),
+    profile_image_url VARCHAR(255),
     gender ENUM('male', 'female', 'other'),
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -68,6 +102,22 @@ CREATE TABLE IF NOT EXISTS UserPushTokens (
     FOREIGN KEY (push_token_id) REFERENCES PushTokens(id)
 )`;
 
+const ensureColumnsExist = async () => {
+    const columnsToCheck = [
+        { tableName: 'users', columnName: 'profile_image_url', columnDefinition: 'profile_image_url VARCHAR(255)' },
+        // Ajoutez d'autres colonnes et définitions ici si nécessaire
+    ];
+
+    for (const { tableName, columnName, columnDefinition } of columnsToCheck) {
+        const columnExists = await checkColumnExists(tableName, columnName);
+        if (!columnExists) {
+            await addColumnToTable(tableName, columnDefinition);
+        } else {
+            console.log(`Column ${columnName} already exists in table ${tableName}`);
+        }
+    }
+};
+
 export const initializeDatabase = async () => {
     const connection = await pool.getConnection();
     try {
@@ -82,6 +132,7 @@ export const initializeDatabase = async () => {
             console.log("Users table created successfully");
         } else {
             console.log("Users table already exists");
+            await ensureColumnsExist(); // Vérifier et ajouter les colonnes si nécessaire
         }
 
         if (!followersTableExists) {
