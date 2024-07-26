@@ -33,7 +33,6 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 const storage = multer.memoryStorage();
 const upload = multer({ storage }).single('profileImage');
 
-
 export const registerController = async (req: Request, res: Response) => {
     const { username, emailAddresses, password, gender } = req.body;
     const profileImage = req.file;
@@ -47,7 +46,7 @@ export const registerController = async (req: Request, res: Response) => {
             return res.status(400).json({ status: 'error', message: 'User already exists' });
         }
 
-        let profileImageUrl = null;
+        let profileImageUrl: string | null = null;
 
         if (profileImage) {
             try {
@@ -65,7 +64,12 @@ export const registerController = async (req: Request, res: Response) => {
                 return res.status(500).json({ status: 'error', message: 'Image upload failed' });
             }
         } else {
-            console.log('No profile image provided.');
+            // Set default profile image URL based on gender
+            if (gender === 'female') {
+                profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/upb08ercpavzhyi1vzhs.png';
+            } else {
+                profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/htpon9qyg2oktamknqzz.png';
+            }
         }
 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;

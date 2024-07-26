@@ -70,7 +70,8 @@ const createFollowersTable = `
 CREATE TABLE IF NOT EXISTS followers (
     user_id INT NOT NULL,
     follower_id INT NOT NULL,
-    followed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    followed_at TIMESTAMP NULL,
+    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
     PRIMARY KEY (user_id, follower_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (follower_id) REFERENCES users(id)
@@ -80,7 +81,8 @@ const createFollowingsTable = `
 CREATE TABLE IF NOT EXISTS followings (
     user_id INT NOT NULL,
     following_id INT NOT NULL,
-    followed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    following_at TIMESTAMP NULL,
+    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
     PRIMARY KEY (user_id, following_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (following_id) REFERENCES users(id)
