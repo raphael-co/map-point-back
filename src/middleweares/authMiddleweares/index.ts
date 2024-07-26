@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
 import { UserPayload } from '../../types/express';
+import multer from 'multer';
 
+const upload = multer().single('profileImage');
 dotenv.config();
 
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -13,9 +15,6 @@ if (!SECRET_KEY) {
 
 export const validateLogin = (req: Request, res: Response, next: NextFunction) => {
     const { emailAddresses, password } = req.body;
-
-    console.log(req.body);
-    console.log(emailAddresses);
 
     if (!emailAddresses) {
         return res.status(400).json({ status: 'error', message: 'paths are required.' });
@@ -28,40 +27,45 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
 };
 
 export const validateRegister = (req: Request, res: Response, next: NextFunction) => {
-    const { username, emailAddresses, password, gender } = req.body;
+    upload(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ status: 'error', message: 'File upload error' });
+        }
 
-    console.log('ici');
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/;
+        const { username, emailAddresses, password, gender } = req.body;
 
-    if (!username) {
-        return res.status(400).json({ status: 'error', message: 'Username is required.' });
-    }
-    if (username.length > 50) {
-        return res.status(400).json({ status: 'error', message: 'Username must be 50 characters or less.' });
-    }
-    if (!emailAddresses) {
-        return res.status(400).json({ status: 'error', message: 'Email address is required.' });
-    }
-    if (!emailRegex.test(emailAddresses)) {
-        return res.status(400).json({ status: 'error', message: 'Email address is not valid.' });
-    }
-    if (!password) {
-        return res.status(400).json({ status: 'error', message: 'Password is required.' });
-    }
-    if (!passwordRegex.test(password)) {
-        return res.status(400).json({
-            status: 'error',
-            message: 'Password must be at least 6 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.'
-        });
-    }
-    if (!gender || !['male', 'female', 'other'].includes(gender)) {
-        return res.status(400).json({ status: 'error', message: 'Gender must be either male, female, or other.' });
-    }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/;
 
-    next();
+        if (!username) {
+            return res.status(400).json({ status: 'error', message: 'Username is required.' });
+        }
+        if (username.length > 50) {
+            return res.status(400).json({ status: 'error', message: 'Username must be 50 characters or less.' });
+        }
+        if (!emailAddresses) {
+            return res.status(400).json({ status: 'error', message: 'Email address is required.' });
+        }
+        if (!emailRegex.test(emailAddresses)) {
+            return res.status(400).json({ status: 'error', message: 'Email address is not valid.' });
+        }
+        if (!password) {
+            return res.status(400).json({ status: 'error', message: 'Password is required.' });
+        }
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Password must be at least 6 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.'
+            });
+        }
+        if (!gender || !['male', 'female', 'other'].includes(gender)) {
+            return res.status(400).json({ status: 'error', message: 'Gender must be either male, female, or other.' });
+        }
+
+        next();
+    });
 };
+
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
@@ -73,10 +77,10 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         if (err) {
             return res.status(403).send({ message: "Invalid token", success: 'danger' });
         }
-        
+
         // Type check to ensure user is of type JwtPayload
         if (typeof user !== 'string' && user?.id) {
-            req.user = user.id as UserPayload;
+            req.user = { id: user.id, email: user.email }
         } else {
             req.user = undefined;
         }

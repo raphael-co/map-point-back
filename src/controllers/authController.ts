@@ -6,6 +6,7 @@ import pool from '../utils/config/dbConnection';
 import dotenv from 'dotenv';
 import { OAuth2Client } from 'google-auth-library';
 import cloudinary from 'cloudinary';
+import multer from 'multer';
 
 dotenv.config();
 
@@ -22,22 +23,24 @@ if (!GOOGLE_CLIENT_ID) {
 
 // Configurez Cloudinary avec vos informations d'identification
 cloudinary.v2.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: 'juste-pour-toi-mon-ami',
+    api_key: '724892481592721',
+    api_secret: '45HWXHiFq2QlInbGpmKM0A28yJE',
 });
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-export const registerController = async (req: Request, res: Response) => {
-    const { username, emailAddresses, password, gender, profileImage } = req.body;
+const storage = multer.memoryStorage();
+const upload = multer({ storage }).single('profileImage');
 
-    console.log('ICI');
-    
+
+export const registerController = async (req: Request, res: Response) => {
+    const { username, emailAddresses, password, gender } = req.body;
+    const profileImage = req.file;
+
     try {
         const connection = await pool.getConnection();
         const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [emailAddresses]);
-        console.log(rows);
 
         if (rows.length > 0) {
             connection.release();
@@ -46,28 +49,37 @@ export const registerController = async (req: Request, res: Response) => {
 
         let profileImageUrl = null;
 
-        // Upload de l'image de profil sur Cloudinary si fournie
         if (profileImage) {
-            const uploadResult = await cloudinary.v2.uploader.upload(profileImage, {
-                folder: 'mapPoint/profile_pictures',
-            });
-            profileImageUrl = uploadResult.secure_url;
+            try {
+                const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+                    cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/profile_pictures' }, (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result as { secure_url: string });
+                    }).end(profileImage.buffer);
+                });
+
+                profileImageUrl = result.secure_url;
+            } catch (error) {
+                console.error('Cloudinary error:', error);
+                connection.release();
+                return res.status(500).json({ status: 'error', message: 'Image upload failed' });
+            }
+        } else {
+            console.log('No profile image provided.');
         }
-        console.log(profileImage);
 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
         const [result] = await connection.query<ResultSetHeader>(
-            'INSERT INTO users (username, email, password, gender, profile_image_url, connection_type) VALUES (?, ?, ?, ?, ?, ?)', 
+            'INSERT INTO users (username, email, password, gender, profile_image_url, connection_type) VALUES (?, ?, ?, ?, ?, ?)',
             [username, emailAddresses, hashedPassword, gender, profileImageUrl, 'mail']
         );
-        
+
         connection.release();
 
         const userId = result.insertId;
-
         const jwtToken = jwt.sign({ id: userId, email: emailAddresses }, SECRET_KEY, { expiresIn: '1h' });
-        
+
         res.status(201).json({ status: 'success', message: 'User registered successfully', token: jwtToken });
     } catch (error) {
         console.error(error);
@@ -82,7 +94,7 @@ export const loginController = async (req: Request, res: Response) => {
         const connection = await pool.getConnection();
         const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [emailAddresses]);
         connection.release();
-        
+
         if (rows.length === 0) {
             return res.status(400).json({ status: 'error', message: 'Invalid credentials' });
         }
@@ -119,10 +131,10 @@ export const googleAuthController = async (req: Request, res: Response) => {
 
         const connection = await pool.getConnection();
         const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
-        
+
         if (rows.length === 0) {
             await connection.query(
-                'INSERT INTO users (username, email, password, profile_image_url, connection_type) VALUES (?, ?, ?, ?, ?)', 
+                'INSERT INTO users (username, email, password, profile_image_url, connection_type) VALUES (?, ?, ?, ?, ?)',
                 [name, email, null, picture, 'google']
             );
         }
@@ -158,14 +170,24 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
 
             let profileImageUrl = null;
 
-            console.log(profileImage);
-            
             // Upload de l'image de profil sur Cloudinary si fournie
             if (profileImage) {
-                const uploadResult = await cloudinary.v2.uploader.upload(profileImage, {
-                    folder: 'profile_pictures',
-                });
-                profileImageUrl = uploadResult.secure_url;
+                try {
+                    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+                        cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/profile_pictures' }, (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result as { secure_url: string });
+                        }).end(profileImage.buffer);
+                    });
+    
+                    profileImageUrl = result.secure_url;
+                } catch (error) {
+                    console.error('Cloudinary error:', error);
+                    connection.release();
+                    return res.status(500).json({ status: 'error', message: 'Image upload failed' });
+                }
+            } else {
+                console.log('No profile image provided.');
             }
 
             const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
@@ -174,7 +196,7 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
 
         if (insertValues.length > 0) {
             await connection.query<ResultSetHeader>(
-                'INSERT INTO users (username, email, password, gender, profile_image_url, connection_type) VALUES ?', 
+                'INSERT INTO users (username, email, password, gender, profile_image_url, connection_type) VALUES ?',
                 [insertValues]
             );
         }

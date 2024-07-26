@@ -3,7 +3,7 @@ import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 
 export const getUserAuth = async (req: Request, res: Response) => {
-    const userId = req.user;
+    const userId = req.user?.id;
 
     try {
         const connection = await pool.getConnection();
@@ -39,12 +39,38 @@ export const getAllUsers = async (req: Request, res: Response) => {
     }
 };
 
-
 export const getAllUsersExceptCurrent = async (req: Request, res: Response) => {
     try {
-        const userId = req.user;
+        // Assurez-vous que req.user est typé correctement
+        const userId = req.user!.id;
+        const { username, email, gender, page = 1, limit = 10 } = req.query;
+
+        const offset = (Number(page) - 1) * Number(limit);
+
+        let query = 'SELECT id, username, email, gender FROM users WHERE id != ?';
+        let queryParams: (string | number)[] = [userId];
+
+        // Vérifiez les types et castings des paramètres de requête
+        if (typeof username === 'string') {
+            query += ' AND username LIKE ?';
+            queryParams.push(`%${username}%`);
+        }
+
+        if (typeof email === 'string') {
+            query += ' AND email LIKE ?';
+            queryParams.push(`%${email}%`);
+        }
+
+        if (typeof gender === 'string') {
+            query += ' AND gender = ?';
+            queryParams.push(gender);
+        }
+
+        query += ' LIMIT ? OFFSET ?';
+        queryParams.push(Number(limit), offset);
+
         const connection = await pool.getConnection();
-        const [rows] = await connection.query<RowDataPacket[]>('SELECT id, username, email, gender FROM users WHERE id != ?', [userId]);
+        const [rows] = await connection.query<RowDataPacket[]>(query, queryParams);
         connection.release();
 
         if (rows.length === 0) {

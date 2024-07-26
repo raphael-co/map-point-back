@@ -8,11 +8,11 @@ const pushRouter = express.Router();
 
 pushRouter.post('/save-token', authenticateToken, async (req, res) => {
     const { token } = req.body;
-    const userId = req.user;
+    const userId = req.user?.id;
     try {
         console.log('saving token');
         console.log(token);
-        
+
         // Check if the token already exists in the PushTokens table
         let [rows] = await pool.query('SELECT id FROM PushTokens WHERE token = ?', [token]);
         let tokenId;
@@ -30,7 +30,7 @@ pushRouter.post('/save-token', authenticateToken, async (req, res) => {
         if ((rows as any[]).length === 0) {
             await pool.query('INSERT INTO UserPushTokens (user_id, push_token_id) VALUES (?, ?)', [userId, tokenId]);
         }
-        
+
         res.status(200).send({ success: true });
     } catch (error) {
         console.error(error);
@@ -40,7 +40,7 @@ pushRouter.post('/save-token', authenticateToken, async (req, res) => {
 
 pushRouter.post('/send-notification', authenticateToken, async (req, res) => {
     const { title, body } = req.body;
-    const userId = req.user;
+    const userId = req.user?.id;
     try {
         // Get the tokens associated with the user from the UserPushTokens table
         const [tokens] = await pool.query(`
@@ -82,9 +82,9 @@ pushRouter.post('/send-notification', authenticateToken, async (req, res) => {
 
 pushRouter.post('/remove-push-token', authenticateToken, async (req, res) => {
     const { token } = req.body;
-    const userId = req.user;
+    const userId = req.user?.id;
     console.log(token);
-    
+
     try {
         // Find the push token ID
         const [tokenRows] = await pool.query('SELECT id FROM PushTokens WHERE token = ?', [token]);
