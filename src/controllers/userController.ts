@@ -237,22 +237,30 @@ export const deleteUser = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
-
 export const updateUser = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     const { username, gender } = req.body;
     const profileImage = req.file;
 
+    console.log('Starting updateUser function');
+    console.log('User ID:', userId);
+    console.log('Username:', username);
+    console.log('Gender:', gender);
+    console.log('Profile image:', profileImage ? 'Provided' : 'Not provided');
+
     if (!userId) {
+        console.log('No user ID found. Unauthorized access attempt.');
         return res.status(401).json({ status: 'error', message: 'Unauthorized' });
     }
 
     try {
         const connection = await pool.getConnection();
+        console.log('Database connection established.');
 
         // Get the current profile image URL from the database
         const [userRows] = await connection.query<RowDataPacket[]>('SELECT profile_image_url FROM users WHERE id = ?', [userId]);
-        const currentProfileImageUrl = userRows[0].profile_image_url;
+        const currentProfileImageUrl = userRows[0]?.profile_image_url || null;
+        console.log('Current profile image URL:', currentProfileImageUrl);
 
         // Prepare the fields to update
         const fields = [];
@@ -270,23 +278,30 @@ export const updateUser = async (req: Request, res: Response) => {
 
         if (profileImage) {
             try {
+                console.log('Uploading new profile image to Cloudinary.');
                 // Upload the new profile image to Cloudinary
                 const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
                     cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/profile_pictures' }, (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result as { secure_url: string });
+                        if (error) {
+                            console.error('Cloudinary upload error:', error);
+                            reject(error);
+                        } else {
+                            console.log('Cloudinary upload successful:', result!.secure_url);
+                            resolve(result as { secure_url: string });
+                        }
                     }).end(profileImage.buffer);
                 });
-        
+
                 fields.push('profile_image_url = ?');
                 values.push(result.secure_url);
-        
+
                 // Extract the public ID from the current profile image URL if it exists and is not a default image
                 if (currentProfileImageUrl &&
                     !currentProfileImageUrl.includes('htpon9qyg2oktamknqzz') &&
                     !currentProfileImageUrl.includes('upb08ercpavzhyi1vzhs')) {
                     const publicId = currentProfileImageUrl.split('/').pop().split('.')[0];
-        
+                    console.log('Deleting old image from Cloudinary. Public ID:', publicId);
+
                     // Delete the previous image from Cloudinary
                     cloudinary.v2.uploader.destroy(`mapPoint/profile_pictures/${publicId}`, (error, result) => {
                         if (error) console.error('Error deleting old image:', error);
@@ -305,13 +320,15 @@ export const updateUser = async (req: Request, res: Response) => {
             } else {
                 profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/htpon9qyg2oktamknqzz.png';
             }
-        
+            console.log('Setting default profile image URL:', profileImageUrl);
+
             fields.push('profile_image_url = ?');
             values.push(profileImageUrl);
         }
 
         // Ensure there's something to update
         if (fields.length === 0) {
+            console.log('No fields to update. Aborting.');
             connection.release();
             return res.status(400).json({ status: 'error', message: 'No fields to update' });
         }
@@ -320,12 +337,14 @@ export const updateUser = async (req: Request, res: Response) => {
         const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
         values.push(userId); // Append userId for the WHERE clause
 
+        console.log('Executing update query:', query, values);
         await connection.query(query, values);
         connection.release();
 
+        console.log('User update successful.');
         res.status(200).json({ status: 'success', message: 'User updated successfully' });
     } catch (error) {
-        console.error(error);
+        console.error('Database error:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
