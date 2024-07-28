@@ -131,48 +131,6 @@ export const sendNotification = async (req: Request, res: Response) => {
     }
 };
 
-// Function to remove a push notification token
-export const removePushToken = async (req: Request, res: Response) => {
-    const { token } = req.body;
-    const userId = req.user?.id;
-
-    if (!userId) {
-        return res.status(400).json({ success: false, error: 'User ID is required' });
-    }
-
-    try {
-        // Get the token ID
-        const [tokenRows]: [RowDataPacket[], any] = await pool.query(
-            'SELECT id FROM PushTokens WHERE token = ?', [token]
-        );
-        if (tokenRows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Token not found' });
-        }
-        const tokenId = tokenRows[0].id;
-
-        // Remove the association between the user and the token
-        const [result]: [ResultSetHeader, any] = await pool.query(
-            'DELETE FROM UserPushTokens WHERE push_token_id = ? AND user_id = ?', [tokenId, userId]
-        );
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Token not found or not associated with the user' });
-        }
-
-        // Check if there are any remaining associations for this token
-        const [remainingAssociations]: [RowDataPacket[], any] = await pool.query(
-            'SELECT * FROM UserPushTokens WHERE push_token_id = ?', [tokenId]
-        );
-        if (remainingAssociations.length === 0) {
-            await pool.query('DELETE FROM PushTokens WHERE id = ?', [tokenId]);
-        }
-
-        res.status(200).json({ success: true });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: 'Database error' });
-    }
-};
-
 // Function to send notifications to multiple users
 export const sendNotificationToUsers = async (req: Request, res: Response) => {
     const { title, body, targetUserIds } = req.body;
@@ -217,5 +175,49 @@ export const sendNotificationToUsers = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error(error);
         res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Function to link a user with a push token
+export const linkUserWithPushToken = async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const userId = req.user?.id;
+    if (!userId || !token) {
+        return res.status(400).json({ success: false, error: 'User ID and token are required' });
+    }
+
+    try {
+        // Check if the token already exists in PushTokens
+        const [tokenRows]: [RowDataPacket[], any] = await pool.query(
+            'SELECT id FROM PushTokens WHERE token = ?', [token]
+        );
+
+        let tokenId: number;
+        if (tokenRows.length === 0) {
+            // If the token doesn't exist, insert it and get its ID
+            const [result]: [ResultSetHeader, any] = await pool.query(
+                'INSERT INTO PushTokens (token) VALUES (?)', [token]
+            );
+            tokenId = result.insertId;
+        } else {
+            tokenId = tokenRows[0].id;
+        }
+
+        // Check if the association between the user and the token already exists
+        const [userTokenRows]: [RowDataPacket[], any] = await pool.query(
+            'SELECT * FROM UserPushTokens WHERE user_id = ? AND push_token_id = ?', [userId, tokenId]
+        );
+
+        if (userTokenRows.length === 0) {
+            // If the association doesn't exist, insert it
+            await pool.query(
+                'INSERT INTO UserPushTokens (user_id, push_token_id) VALUES (?, ?)', [userId, tokenId]
+            );
+        }
+
+        res.status(200).json({ success: true, message: 'User linked with push token successfully' });
+    } catch (error: any) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Database error' });
     }
 };
