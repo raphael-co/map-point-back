@@ -221,3 +221,39 @@ export const linkUserWithPushToken = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, error: 'Database error' });
     }
 };
+
+export const unlinkUserWithPushToken = async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId || !token) {
+        return res.status(400).json({ success: false, error: 'User ID and token are required' });
+    }
+
+    try {
+        // Check if the token exists in PushTokens
+        const [tokenRows]: [RowDataPacket[], any] = await pool.query(
+            'SELECT id FROM PushTokens WHERE token = ?', [token]
+        );
+
+        if (tokenRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Token not found' });
+        }
+
+        const tokenId = tokenRows[0].id;
+
+        // Remove the association between the user and the token
+        const [result]: [ResultSetHeader, any] = await pool.query(
+            'DELETE FROM UserPushTokens WHERE user_id = ? AND push_token_id = ?', [userId, tokenId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Association not found' });
+        }
+
+        res.status(200).json({ success: true, message: 'User unlinked from push token successfully' });
+    } catch (error: any) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Database error' });
+    }
+};
