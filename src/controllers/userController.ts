@@ -277,16 +277,16 @@ export const updateUser = async (req: Request, res: Response) => {
                         else resolve(result as { secure_url: string });
                     }).end(profileImage.buffer);
                 });
-
+        
                 fields.push('profile_image_url = ?');
                 values.push(result.secure_url);
-
+        
                 // Extract the public ID from the current profile image URL if it exists and is not a default image
                 if (currentProfileImageUrl &&
                     !currentProfileImageUrl.includes('htpon9qyg2oktamknqzz') &&
                     !currentProfileImageUrl.includes('upb08ercpavzhyi1vzhs')) {
                     const publicId = currentProfileImageUrl.split('/').pop().split('.')[0];
-
+        
                     // Delete the previous image from Cloudinary
                     cloudinary.v2.uploader.destroy(`mapPoint/profile_pictures/${publicId}`, (error, result) => {
                         if (error) console.error('Error deleting old image:', error);
@@ -297,6 +297,17 @@ export const updateUser = async (req: Request, res: Response) => {
                 connection.release();
                 return res.status(500).json({ status: 'error', message: 'Image upload failed' });
             }
+        } else {
+            // Set default profile image URL based on gender
+            let profileImageUrl: string;
+            if (gender === 'female') {
+                profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/upb08ercpavzhyi1vzhs.png';
+            } else {
+                profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/htpon9qyg2oktamknqzz.png';
+            }
+        
+            fields.push('profile_image_url = ?');
+            values.push(profileImageUrl);
         }
 
         // Ensure there's something to update
