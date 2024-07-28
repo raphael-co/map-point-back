@@ -115,6 +115,7 @@ export const getUserById = async (req: Request, res: Response) => {
 
         // Vérifier si le currentUserId suit déjà l'utilisateur avec le statut 'accepted'
         const [isFollowingRows] = await connection.query<RowDataPacket[]>('SELECT status FROM followings WHERE user_id = ? AND following_id = ?', [currentUserId, userId]);
+
         
         const isFollowing = isFollowingRows.length > 0 && isFollowingRows[0].status === 'accepted';
 

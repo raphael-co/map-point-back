@@ -1,9 +1,10 @@
 import pool from "./dbConnection";
+import { RowDataPacket } from "mysql2/promise";
 
-const checkTableExists = async (tableName: string) => {
+const checkTableExists = async (tableName: string): Promise<boolean> => {
     const connection = await pool.getConnection();
     try {
-        const [rows] = await connection.query<any[]>(
+        const [rows] = await connection.query<RowDataPacket[]>(
             `SELECT TABLE_NAME 
             FROM information_schema.tables 
             WHERE table_schema = DATABASE() 
@@ -19,10 +20,10 @@ const checkTableExists = async (tableName: string) => {
     }
 };
 
-const checkColumnExists = async (tableName: string, columnName: string) => {
+const checkColumnExists = async (tableName: string, columnName: string): Promise<boolean> => {
     const connection = await pool.getConnection();
     try {
-        const [rows] = await connection.query<any[]>(
+        const [rows] = await connection.query<RowDataPacket[]>(
             `SELECT COLUMN_NAME 
             FROM information_schema.columns 
             WHERE table_schema = DATABASE() 
@@ -39,7 +40,7 @@ const checkColumnExists = async (tableName: string, columnName: string) => {
     }
 };
 
-const addColumnToTable = async (tableName: string, columnDefinition: string) => {
+const addColumnToTable = async (tableName: string, columnDefinition: string): Promise<void> => {
     const connection = await pool.getConnection();
     try {
         await connection.query(`ALTER TABLE ${tableName} ADD ${columnDefinition}`);
@@ -99,12 +100,13 @@ const createUserPushTokensTable = `
 CREATE TABLE IF NOT EXISTS UserPushTokens (
     user_id INT NOT NULL,
     push_token_id INT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
     PRIMARY KEY (user_id, push_token_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (push_token_id) REFERENCES PushTokens(id)
 )`;
 
-const ensureColumnsExist = async () => {
+const ensureColumnsExist = async (): Promise<void> => {
     const columnsToCheck = [
         { tableName: 'users', columnName: 'profile_image_url', columnDefinition: 'profile_image_url VARCHAR(255)' },
         // Ajoutez d'autres colonnes et définitions ici si nécessaire
@@ -120,7 +122,7 @@ const ensureColumnsExist = async () => {
     }
 };
 
-export const initializeDatabase = async () => {
+export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     try {
         const usersTableExists = await checkTableExists('users');
