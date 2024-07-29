@@ -235,7 +235,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
     try {
         const connection = await pool.getConnection();
-        const [userRows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
+        const [userRows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email.trim().toLowerCase()]);
 
         if (userRows.length === 0) {
             connection.release();
