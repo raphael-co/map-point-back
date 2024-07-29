@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import { OAuth2Client } from 'google-auth-library';
 import cloudinary from 'cloudinary';
 import multer from 'multer';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -183,7 +185,7 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
                             else resolve(result as { secure_url: string });
                         }).end(profileImage.buffer);
                     });
-    
+
                     profileImageUrl = result.secure_url;
                 } catch (error) {
                     console.error('Cloudinary error:', error);
@@ -208,6 +210,93 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
         connection.release();
 
         res.status(201).json({ status: 'success', message: `${insertValues.length} users registered successfully` });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: 'mailgraphnet@gmail.com',
+        pass: 'mvxq xlxl fuxd vjsh'
+    }
+});
+
+export const requestPasswordReset = async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ status: 'error', message: 'Email is required' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+        const [userRows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
+
+        if (userRows.length === 0) {
+            connection.release();
+            return res.status(400).json({ status: 'error', message: 'User does not exist' });
+        }
+
+        const user = userRows[0];
+        const resetToken = crypto.randomBytes(4).toString('hex'); // 8 characters token
+        const tokenExpiration = new Date(Date.now() + 3600000); // Token valid for 1 hour
+
+        await connection.query(
+            'INSERT INTO PasswordResetTokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+            [user.id, resetToken, tokenExpiration]
+        );
+        connection.release();
+
+        const mailOptions = {
+            from: '"Password Reset" <your-email@gmail.com>',
+            to: email,
+            subject: 'Password Reset Request',
+            text: `Your password reset token is ${resetToken}. It will expire in 1 hour.`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ status: 'success', message: 'Password reset token sent' });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+
+export const resetPassword = async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+        return res.status(400).json({ status: 'error', message: 'Token and new password are required' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+        const [tokenRows] = await connection.query<RowDataPacket[]>(
+            'SELECT * FROM PasswordResetTokens WHERE token = ? AND expires_at > NOW()',
+            [token]
+        );
+
+        if (tokenRows.length === 0) {
+            connection.release();
+            return res.status(400).json({ status: 'error', message: 'Invalid or expired token' });
+        }
+
+        const resetToken = tokenRows[0];
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await connection.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, resetToken.user_id]);
+        await connection.query('DELETE FROM PasswordResetTokens WHERE token = ?', [token]);
+
+        connection.release();
+        res.status(200).json({ status: 'success', message: 'Password reset successfully' });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });

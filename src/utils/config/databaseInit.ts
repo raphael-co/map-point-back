@@ -6,9 +6,9 @@ const checkTableExists = async (tableName: string): Promise<boolean> => {
     try {
         const [rows] = await connection.query<RowDataPacket[]>(
             `SELECT TABLE_NAME 
-            FROM information_schema.tables 
-            WHERE table_schema = DATABASE() 
-            AND table_name = ?`,
+             FROM information_schema.tables 
+             WHERE table_schema = DATABASE() 
+             AND table_name = ?`,
             [tableName]
         );
         return rows.length > 0;
@@ -25,10 +25,10 @@ const checkColumnExists = async (tableName: string, columnName: string): Promise
     try {
         const [rows] = await connection.query<RowDataPacket[]>(
             `SELECT COLUMN_NAME 
-            FROM information_schema.columns 
-            WHERE table_schema = DATABASE() 
-            AND table_name = ? 
-            AND column_name = ?`,
+             FROM information_schema.columns 
+             WHERE table_schema = DATABASE() 
+             AND table_name = ? 
+             AND column_name = ?`,
             [tableName, columnName]
         );
         return rows.length > 0;
@@ -106,10 +106,20 @@ CREATE TABLE IF NOT EXISTS UserPushTokens (
     FOREIGN KEY (push_token_id) REFERENCES PushTokens(id)
 )`;
 
+const createPasswordResetTokensTable = `
+CREATE TABLE IF NOT EXISTS PasswordResetTokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(8) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`;
+
 const ensureColumnsExist = async (): Promise<void> => {
     const columnsToCheck = [
         { tableName: 'users', columnName: 'profile_image_url', columnDefinition: 'profile_image_url VARCHAR(255)' },
-        // Ajoutez d'autres colonnes et définitions ici si nécessaire
+        // Add more columns and definitions here if necessary
     ];
 
     for (const { tableName, columnName, columnDefinition } of columnsToCheck) {
@@ -130,13 +140,14 @@ export const initializeDatabase = async (): Promise<void> => {
         const followingsTableExists = await checkTableExists('followings');
         const pushTokensTableExists = await checkTableExists('PushTokens');
         const userPushTokensTableExists = await checkTableExists('UserPushTokens');
+        const passwordResetTokensTableExists = await checkTableExists('PasswordResetTokens');
 
         if (!usersTableExists) {
             await connection.query(createUsersTable);
             console.log("Users table created successfully");
         } else {
             console.log("Users table already exists");
-            await ensureColumnsExist(); // Vérifier et ajouter les colonnes si nécessaire
+            await ensureColumnsExist(); // Check and add columns if necessary
         }
 
         if (!followersTableExists) {
@@ -165,6 +176,13 @@ export const initializeDatabase = async (): Promise<void> => {
             console.log("UserPushTokens table created successfully");
         } else {
             console.log("UserPushTokens table already exists");
+        }
+
+        if (!passwordResetTokensTableExists) {
+            await connection.query(createPasswordResetTokensTable);
+            console.log("PasswordResetTokens table created successfully");
+        } else {
+            console.log("PasswordResetTokens table already exists");
         }
     } catch (error) {
         console.error("Error initializing database: ", error);
