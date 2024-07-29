@@ -339,10 +339,40 @@ export const updateUser = async (req: Request, res: Response) => {
 
         console.log('Executing update query:', query, values);
         await connection.query(query, values);
+
+        // Retrieve updated user information
+        const [updatedUserRows] = await connection.query<RowDataPacket[]>(
+            'SELECT id, username, email, gender, profile_image_url, joined_at, last_login FROM users WHERE id = ?',
+            [userId]
+        );
+        const updatedUser = updatedUserRows[0];
+
+        // Count followers with 'accepted' status
+        const [followerCountRows] = await connection.query<RowDataPacket[]>(
+            'SELECT COUNT(*) as count FROM followers WHERE user_id = ? AND status = "accepted"',
+            [userId]
+        );
+        const followerCount = followerCountRows[0].count;
+
+        // Count followings with 'accepted' status
+        const [followingCountRows] = await connection.query<RowDataPacket[]>(
+            'SELECT COUNT(*) as count FROM followings WHERE user_id = ? AND status = "accepted"',
+            [userId]
+        );
+        const followingCount = followingCountRows[0].count;
+
         connection.release();
 
         console.log('User update successful.');
-        res.status(200).json({ status: 'success', message: 'User updated successfully' });
+        res.status(200).json({
+            status: 'success',
+            message: 'User updated successfully',
+            user: {
+                ...updatedUser,
+                followers: followerCount,
+                followings: followingCount,
+            }
+        });
     } catch (error) {
         console.error('Database error:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
