@@ -36,3 +36,20 @@ export const validateEditeUser= (req: Request, res: Response, next: NextFunction
         next();
     });
 };
+
+export const validateChangePassword = (req: Request, res: Response, next: NextFunction) => {
+    const { oldPassword, newPassword,confirmPassword } = req.body;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({ status: 'error', message: 'Old password and new password  and confirm password are required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({ status: 'error', message: 'New password and confirm password do not match' });
+    }
+    if (newPassword.length < 8) {
+        return res.status(400).json({ status: 'error', message: 'New password must be at least 8 characters long' });
+    }
+
+    next();
+};
