@@ -4,6 +4,7 @@ import pool from '../utils/config/dbConnection';
 import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
 import multer from 'multer';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
@@ -375,6 +376,59 @@ export const updateUser = async (req: Request, res: Response) => {
         });
     } catch (error) {
         console.error('Database error:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!userId) {
+        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+    }
+
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ status: 'error', message: 'Old password and new password are required' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Retrieve the current hashed password from the database
+        const [userRows] = await connection.query<RowDataPacket[]>(
+            'SELECT password FROM users WHERE id = ?',
+            [userId]
+        );
+
+        if (userRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ status: 'error', message: 'User not found' });
+        }
+
+        const user = userRows[0];
+
+        // Verify the old password
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+            connection.release();
+            return res.status(400).json({ status: 'error', message: 'Incorrect old password' });
+        }
+
+        // Hash the new password
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the password in the database
+        await connection.query(
+            'UPDATE users SET password = ? WHERE id = ?',
+            [hashedNewPassword, userId]
+        );
+
+        connection.release();
+
+        res.status(200).json({ status: 'success', message: 'Password updated successfully' });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
