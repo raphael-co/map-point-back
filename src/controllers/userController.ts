@@ -70,7 +70,6 @@ export const getUserAuth = async (req: Request, res: Response) => {
                 ...user,
                 followers: followerCount,
                 followings: followingCount,
-
             }
         });
     } catch (error) {
@@ -78,6 +77,7 @@ export const getUserAuth = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
 
 export const getAllUsers = async (req: Request, res: Response) => {
     try {
