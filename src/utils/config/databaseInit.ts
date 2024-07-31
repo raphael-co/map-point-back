@@ -20,39 +20,6 @@ const checkTableExists = async (tableName: string): Promise<boolean> => {
     }
 };
 
-const checkColumnExists = async (tableName: string, columnName: string): Promise<boolean> => {
-    const connection = await pool.getConnection();
-    try {
-        const [rows] = await connection.query<RowDataPacket[]>(
-            `SELECT COLUMN_NAME 
-             FROM information_schema.columns 
-             WHERE table_schema = DATABASE() 
-             AND table_name = ? 
-             AND column_name = ?`,
-            [tableName, columnName]
-        );
-        return rows.length > 0;
-    } catch (error) {
-        console.error(`Error checking column ${columnName} in table ${tableName}:`, error);
-        throw error;
-    } finally {
-        connection.release();
-    }
-};
-
-const addColumnToTable = async (tableName: string, columnDefinition: string): Promise<void> => {
-    const connection = await pool.getConnection();
-    try {
-        await connection.query(`ALTER TABLE ${tableName} ADD ${columnDefinition}`);
-        console.log(`Column ${columnDefinition} added to ${tableName} successfully`);
-    } catch (error) {
-        console.error(`Error adding column ${columnDefinition} to table ${tableName}:`, error);
-        throw error;
-    } finally {
-        connection.release();
-    }
-};
-
 const createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -116,21 +83,60 @@ CREATE TABLE IF NOT EXISTS PasswordResetTokens (
     FOREIGN KEY (user_id) REFERENCES users(id)
 )`;
 
-const ensureColumnsExist = async (): Promise<void> => {
-    const columnsToCheck = [
-        { tableName: 'users', columnName: 'profile_image_url', columnDefinition: 'profile_image_url VARCHAR(255)' },
-        // Add more columns and definitions here if necessary
-    ];
+const createMarkersTable = `
+CREATE TABLE IF NOT EXISTS Markers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    latitude DECIMAL(9, 6) NOT NULL,
+    longitude DECIMAL(9, 6) NOT NULL,
+    visibility ENUM('private', 'friends', 'public') DEFAULT 'public',
+    type ENUM('park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other') NOT NULL,
+    comfort_rating TINYINT(1) CHECK (comfort_rating BETWEEN 1 AND 5),
+    noise_rating TINYINT(1) CHECK (noise_rating BETWEEN 1 AND 5),
+    cleanliness_rating TINYINT(1) CHECK (cleanliness_rating BETWEEN 1 AND 5),
+    accessibility_rating TINYINT(1) CHECK (accessibility_rating BETWEEN 1 AND 5),
+    safety_rating TINYINT(1) CHECK (safety_rating BETWEEN 1 AND 5),
+    overall_rating TINYINT(1) CHECK (overall_rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`;
 
-    for (const { tableName, columnName, columnDefinition } of columnsToCheck) {
-        const columnExists = await checkColumnExists(tableName, columnName);
-        if (!columnExists) {
-            await addColumnToTable(tableName, columnDefinition);
-        } else {
-            console.log(`Column ${columnName} already exists in table ${tableName}`);
-        }
-    }
-};
+const createMarkerImagesTable = `
+CREATE TABLE IF NOT EXISTS MarkerImages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    marker_id INT NOT NULL,
+    user_id INT NOT NULL,
+    image_url VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (marker_id) REFERENCES Markers(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`;
+
+const createMarkerCommentsTable = `
+CREATE TABLE IF NOT EXISTS MarkerComments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    marker_id INT NOT NULL,
+    user_id INT NOT NULL,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (marker_id) REFERENCES Markers(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`;
+
+const createMarkerRatingsTable = `
+CREATE TABLE IF NOT EXISTS MarkerRatings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    marker_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating TINYINT(1) NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (marker_id) REFERENCES Markers(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`;
 
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
@@ -141,13 +147,16 @@ export const initializeDatabase = async (): Promise<void> => {
         const pushTokensTableExists = await checkTableExists('PushTokens');
         const userPushTokensTableExists = await checkTableExists('UserPushTokens');
         const passwordResetTokensTableExists = await checkTableExists('PasswordResetTokens');
+        const markersTableExists = await checkTableExists('Markers');
+        const markerImagesTableExists = await checkTableExists('MarkerImages');
+        const markerCommentsTableExists = await checkTableExists('MarkerComments');
+        const markerRatingsTableExists = await checkTableExists('MarkerRatings');
 
         if (!usersTableExists) {
             await connection.query(createUsersTable);
             console.log("Users table created successfully");
         } else {
             console.log("Users table already exists");
-            await ensureColumnsExist(); // Check and add columns if necessary
         }
 
         if (!followersTableExists) {
@@ -184,6 +193,35 @@ export const initializeDatabase = async (): Promise<void> => {
         } else {
             console.log("PasswordResetTokens table already exists");
         }
+
+        if (!markersTableExists) {
+            await connection.query(createMarkersTable);
+            console.log("Markers table created successfully");
+        } else {
+            console.log("Markers table already exists");
+        }
+
+        if (!markerImagesTableExists) {
+            await connection.query(createMarkerImagesTable);
+            console.log("MarkerImages table created successfully");
+        } else {
+            console.log("MarkerImages table already exists");
+        }
+
+        if (!markerCommentsTableExists) {
+            await connection.query(createMarkerCommentsTable);
+            console.log("MarkerComments table created successfully");
+        } else {
+            console.log("MarkerComments table already exists");
+        }
+
+        if (!markerRatingsTableExists) {
+            await connection.query(createMarkerRatingsTable);
+            console.log("MarkerRatings table created successfully");
+        } else {
+            console.log("MarkerRatings table already exists");
+        }
+
     } catch (error) {
         console.error("Error initializing database: ", error);
     } finally {
