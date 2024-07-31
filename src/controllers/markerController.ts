@@ -15,9 +15,11 @@ cloudinary.v2.config({
 });
 
 let io: SocketIOServer;
+
 export const setSocketServer = (ioInstance: SocketIOServer) => {
     io = ioInstance;
 };
+
 
 export const createMarker = async (req: Request, res: Response) => {
     const { title, description, latitude, longitude, type, comfort_rating, noise_rating, cleanliness_rating, accessibility_rating, safety_rating, comment, visibility } = req.body;
@@ -75,7 +77,7 @@ export const createMarker = async (req: Request, res: Response) => {
         connection.release();
 
         // Emit event to all connected clients
-        io.emit('markersUpdated');
+        io.emit('markersUpdated'); // Use `io` to emit events
 
         res.status(201).json({ status: 'success', message: 'Marker created successfully', markerId });
     } catch (error) {
