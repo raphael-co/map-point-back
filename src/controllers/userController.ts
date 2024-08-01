@@ -282,10 +282,11 @@ export const updateUser = async (req: Request, res: Response) => {
                     cloudinary.v2.uploader.upload_stream({
                         folder: 'mapPoint/profile_pictures',
                         transformation: {
-                            width: 1000,
-                            height: 1000,
-                            crop: "limit"
-                        }, 
+                            width: 500, height: 500,
+                            crop: "fill",
+                            quality: 'auto',// Compression automatique de la qualité
+                            fetch_format: "auto" // Conversion automatique au format le plus léger (comme WebP)
+                        },
                         resource_type: "image"
                     }, (error, result) => {
                         if (error) {
@@ -336,7 +337,7 @@ export const updateUser = async (req: Request, res: Response) => {
         }
 
         const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
-        values.push(userId); 
+        values.push(userId);
 
         console.log('Executing update query:', query, values);
         await connection.query(query, values);
