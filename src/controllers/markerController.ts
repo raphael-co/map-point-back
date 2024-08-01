@@ -112,7 +112,13 @@ export const getAllMarkers = async (req: Request, res: Response) => {
             let query = `
                 SELECT 
                     m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
-                    m.type, m.comment, m.visibility, JSON_ARRAYAGG(mi.image_url) as images
+                    m.type, m.comment, m.visibility, 
+                    COALESCE(
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT('url', mi.image_url)
+                        ),
+                        JSON_ARRAY()
+                    ) as images
                 FROM Markers m
                 LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
                 WHERE 
@@ -187,3 +193,4 @@ export const getAllMarkers = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
