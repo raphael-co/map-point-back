@@ -258,12 +258,10 @@ export const updateUser = async (req: Request, res: Response) => {
         const connection = await pool.getConnection();
         console.log('Database connection established.');
 
-        // Get the current profile image URL from the database
         const [userRows] = await connection.query<RowDataPacket[]>('SELECT profile_image_url FROM users WHERE id = ?', [userId]);
         const currentProfileImageUrl = userRows[0]?.profile_image_url || null;
         console.log('Current profile image URL:', currentProfileImageUrl);
 
-        // Prepare the fields to update
         const fields = [];
         const values = [];
 
@@ -280,11 +278,14 @@ export const updateUser = async (req: Request, res: Response) => {
         if (profileImage) {
             try {
                 console.log('Uploading new profile image to Cloudinary.');
-                // Upload the new profile image to Cloudinary
                 const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
                     cloudinary.v2.uploader.upload_stream({
                         folder: 'mapPoint/profile_pictures',
-                        transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                        transformation: {
+                            width: 1000,
+                            height: 1000,
+                            crop: "limit"
+                        }, 
                         resource_type: "image"
                     }, (error, result) => {
                         if (error) {
@@ -300,14 +301,12 @@ export const updateUser = async (req: Request, res: Response) => {
                 fields.push('profile_image_url = ?');
                 values.push(result.secure_url);
 
-                // Extract the public ID from the current profile image URL if it exists and is not a default image
                 if (currentProfileImageUrl &&
                     !currentProfileImageUrl.includes('htpon9qyg2oktamknqzz') &&
                     !currentProfileImageUrl.includes('upb08ercpavzhyi1vzhs')) {
                     const publicId = currentProfileImageUrl.split('/').pop().split('.')[0];
                     console.log('Deleting old image from Cloudinary. Public ID:', publicId);
 
-                    // Delete the previous image from Cloudinary
                     cloudinary.v2.uploader.destroy(`mapPoint/profile_pictures/${publicId}`, (error, result) => {
                         if (error) console.error('Error deleting old image:', error);
                     });
@@ -318,7 +317,6 @@ export const updateUser = async (req: Request, res: Response) => {
                 return res.status(500).json({ status: 'error', message: 'Image upload failed' });
             }
         } else {
-            // Set default profile image URL based on gender
             let profileImageUrl: string;
             if (gender === 'female') {
                 profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/upb08ercpavzhyi1vzhs.png';
@@ -331,35 +329,30 @@ export const updateUser = async (req: Request, res: Response) => {
             values.push(profileImageUrl);
         }
 
-        // Ensure there's something to update
         if (fields.length === 0) {
             console.log('No fields to update. Aborting.');
             connection.release();
             return res.status(400).json({ status: 'error', message: 'No fields to update' });
         }
 
-        // Update query
         const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
-        values.push(userId); // Append userId for the WHERE clause
+        values.push(userId); 
 
         console.log('Executing update query:', query, values);
         await connection.query(query, values);
 
-        // Retrieve updated user information
         const [updatedUserRows] = await connection.query<RowDataPacket[]>(
             'SELECT id, username, email, gender, profile_image_url, joined_at, last_login FROM users WHERE id = ?',
             [userId]
         );
         const updatedUser = updatedUserRows[0];
 
-        // Count followers with 'accepted' status
         const [followerCountRows] = await connection.query<RowDataPacket[]>(
             'SELECT COUNT(*) as count FROM followers WHERE user_id = ? AND status = "accepted"',
             [userId]
         );
         const followerCount = followerCountRows[0].count;
 
-        // Count followings with 'accepted' status
         const [followingCountRows] = await connection.query<RowDataPacket[]>(
             'SELECT COUNT(*) as count FROM followings WHERE user_id = ? AND status = "accepted"',
             [userId]
@@ -383,6 +376,7 @@ export const updateUser = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
 
 export const changePassword = async (req: Request, res: Response) => {
     const userId = req.user?.id;
