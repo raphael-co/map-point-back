@@ -53,7 +53,11 @@ export const registerController = async (req: Request, res: Response) => {
         if (profileImage) {
             try {
                 const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
-                    cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/profile_pictures' }, (error, result) => {
+                    cloudinary.v2.uploader.upload_stream({
+                        folder: 'mapPoint/profile_pictures',
+                        transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                        resource_type: "image"
+                    }, (error, result) => {
                         if (error) reject(error);
                         else resolve(result as { secure_url: string });
                     }).end(profileImage.buffer);
@@ -180,7 +184,11 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
             if (profileImage) {
                 try {
                     const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
-                        cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/profile_pictures' }, (error, result) => {
+                        cloudinary.v2.uploader.upload_stream({
+                            folder: 'mapPoint/profile_pictures',
+                            transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                            resource_type: "image"
+                        }, (error, result) => {
                             if (error) reject(error);
                             else resolve(result as { secure_url: string });
                         }).end(profileImage.buffer);

@@ -282,7 +282,11 @@ export const updateUser = async (req: Request, res: Response) => {
                 console.log('Uploading new profile image to Cloudinary.');
                 // Upload the new profile image to Cloudinary
                 const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
-                    cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/profile_pictures' }, (error, result) => {
+                    cloudinary.v2.uploader.upload_stream({
+                        folder: 'mapPoint/profile_pictures',
+                        transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                        resource_type: "image"
+                    }, (error, result) => {
                         if (error) {
                             console.error('Cloudinary upload error:', error);
                             reject(error);

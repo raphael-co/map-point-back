@@ -74,7 +74,9 @@ export const createMarker = async (req: Request, res: Response) => {
 
         for (const file of files) {
             const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
-                cloudinary.v2.uploader.upload_stream({ folder: 'mapPoint/markers' }, (error, result) => {
+                cloudinary.v2.uploader.upload_stream({  folder: 'mapPoint/profile_pictures',
+                    transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                    resource_type: "image"}, (error, result) => {
                     if (error) {
                         console.error('Cloudinary upload error:', error);
                         reject(error);
