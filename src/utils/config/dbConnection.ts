@@ -11,7 +11,8 @@ const pool = mysql.createPool({
   database: process.env.DATABASE,
   waitForConnections: true,
   connectionLimit: 1000, // Set the limit for connections in the pool
-  queueLimit: 100 // Set the limit for the queue of waiting connections
+  queueLimit: 100, // Set the limit for the queue of waiting connections
+  charset: 'utf8mb4'
 });
 
 console.log(process.env.HOST);

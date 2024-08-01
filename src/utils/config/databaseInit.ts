@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     connection_type ENUM('mail', 'google', 'ios') NOT NULL
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createFollowersTable = `
 CREATE TABLE IF NOT EXISTS followers (
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS followers (
     PRIMARY KEY (user_id, follower_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (follower_id) REFERENCES users(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createFollowingsTable = `
 CREATE TABLE IF NOT EXISTS followings (
@@ -54,14 +54,14 @@ CREATE TABLE IF NOT EXISTS followings (
     PRIMARY KEY (user_id, following_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (following_id) REFERENCES users(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createPushTokensTable = `
 CREATE TABLE IF NOT EXISTS PushTokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createUserPushTokensTable = `
 CREATE TABLE IF NOT EXISTS UserPushTokens (
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS UserPushTokens (
     PRIMARY KEY (user_id, push_token_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (push_token_id) REFERENCES PushTokens(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createPasswordResetTokensTable = `
 CREATE TABLE IF NOT EXISTS PasswordResetTokens (
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS PasswordResetTokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createMarkersTable = `
 CREATE TABLE IF NOT EXISTS Markers (
@@ -93,17 +93,11 @@ CREATE TABLE IF NOT EXISTS Markers (
     longitude DECIMAL(9, 6) NOT NULL,
     visibility ENUM('private', 'friends', 'public') DEFAULT 'public',
     type ENUM('park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other') NOT NULL,
-    comfort_rating TINYINT(1) CHECK (comfort_rating BETWEEN 1 AND 5),
-    noise_rating TINYINT(1) CHECK (noise_rating BETWEEN 1 AND 5),
-    cleanliness_rating TINYINT(1) CHECK (cleanliness_rating BETWEEN 1 AND 5),
-    accessibility_rating TINYINT(1) CHECK (accessibility_rating BETWEEN 1 AND 5),
-    safety_rating TINYINT(1) CHECK (safety_rating BETWEEN 1 AND 5),
-    overall_rating TINYINT(1) CHECK (overall_rating BETWEEN 1 AND 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createMarkerImagesTable = `
 CREATE TABLE IF NOT EXISTS MarkerImages (
@@ -114,7 +108,7 @@ CREATE TABLE IF NOT EXISTS MarkerImages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (marker_id) REFERENCES Markers(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 const createMarkerCommentsTable = `
 CREATE TABLE IF NOT EXISTS MarkerComments (
@@ -125,18 +119,27 @@ CREATE TABLE IF NOT EXISTS MarkerComments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (marker_id) REFERENCES Markers(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
-)`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+// New table to store rating labels for each marker type
+const createRatingLabelsTable = `
+CREATE TABLE IF NOT EXISTS RatingLabels (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    marker_type ENUM('park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other') NOT NULL,
+    label VARCHAR(255) NOT NULL
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
+// Updated MarkerRatings table to include label references
 const createMarkerRatingsTable = `
 CREATE TABLE IF NOT EXISTS MarkerRatings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     marker_id INT NOT NULL,
-    user_id INT NOT NULL,
+    label_id INT NOT NULL,
     rating TINYINT(1) NOT NULL CHECK (rating BETWEEN 1 AND 5),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (marker_id) REFERENCES Markers(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-)`;
+    FOREIGN KEY (label_id) REFERENCES RatingLabels(id)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
@@ -150,6 +153,7 @@ export const initializeDatabase = async (): Promise<void> => {
         const markersTableExists = await checkTableExists('Markers');
         const markerImagesTableExists = await checkTableExists('MarkerImages');
         const markerCommentsTableExists = await checkTableExists('MarkerComments');
+        const ratingLabelsTableExists = await checkTableExists('RatingLabels');
         const markerRatingsTableExists = await checkTableExists('MarkerRatings');
 
         if (!usersTableExists) {
@@ -213,6 +217,13 @@ export const initializeDatabase = async (): Promise<void> => {
             console.log("MarkerComments table created successfully");
         } else {
             console.log("MarkerComments table already exists");
+        }
+
+        if (!ratingLabelsTableExists) {
+            await connection.query(createRatingLabelsTable);
+            console.log("RatingLabels table created successfully");
+        } else {
+            console.log("RatingLabels table already exists");
         }
 
         if (!markerRatingsTableExists) {

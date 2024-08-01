@@ -1,59 +1,95 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import iconv from 'iconv-lite';
 
 dotenv.config();
 
 const upload = multer().array('images');
 
 export const validateCreateMarker = (req: Request, res: Response, next: NextFunction) => {
+    console.log("validateCreateMarker - Start", req.body);
     upload(req, res, (err) => {
         if (err) {
             console.log('File upload error:', err);
-            
             return res.status(400).json({ status: 'error', message: 'File upload error' });
         }
 
-        let { visibility, title, description, latitude, longitude, type, comfort_rating, noise_rating, cleanliness_rating, accessibility_rating, safety_rating, comment } = req.body;
+        let { visibility, title, description, latitude, longitude, type, ratings, comment } = req.body;
 
-        if (!title || !latitude || !longitude || !type || !comfort_rating || !noise_rating || !cleanliness_rating || !accessibility_rating || !safety_rating || !visibility) {
-            return res.status(400).json({ status: 'error', message: 'Title, latitude, longitude, and type are required.' });
+        if (!title || !latitude || !longitude || !type || !visibility) {
+            return res.status(400).json({ status: 'error', message: 'Title, latitude, longitude, type, and visibility are required.' });
         }
 
-        title = title.trim();
-        description = description ? description.trim() : '';
-        comment = comment ? comment.trim() : '';
-        type = type.trim();
+        try {
+            // Utiliser iconv pour s'assurer que les champs sont correctement décodés en UTF-8
+            title = iconv.decode(Buffer.from(title.trim(), 'binary'), 'utf-8');
+            description = description ? iconv.decode(Buffer.from(description.trim(), 'binary'), 'utf-8') : '';
+            comment = comment ? iconv.decode(Buffer.from(comment.trim(), 'binary'), 'utf-8') : '';
+            type = iconv.decode(Buffer.from(type.trim(), 'binary'), 'utf-8');
+
+            console.log("Decoded title:", title);
+            console.log("Decoded description:", description);
+            console.log("Decoded comment:", comment);
+            console.log("Decoded type:", type);
+        } catch (e) {
+            console.log("Error decoding URI components:", e);
+            return res.status(400).json({ status: 'error', message: 'Error decoding input fields.' });
+        }
 
         if (title.length > 255) {
+            console.log("Title length validation failed");
             return res.status(400).json({ status: 'error', message: 'Title must be 255 characters or less.' });
         }
 
         if (isNaN(Number(latitude)) || isNaN(Number(longitude))) {
+            console.log("Latitude/Longitude validation failed");
             return res.status(400).json({ status: 'error', message: 'Latitude and longitude must be valid numbers.' });
         }
 
         latitude = parseFloat(latitude);
         longitude = parseFloat(longitude);
 
+        console.log("Parsed latitude:", latitude);
+        console.log("Parsed longitude:", longitude);
+
         const validTypes = ['park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other'];
         if (!validTypes.includes(type)) {
+            console.log("Type validation failed");
             return res.status(400).json({ status: 'error', message: `Type must be one of the following: ${validTypes.join(', ')}.` });
         }
 
         const validTypesVisibility = ['private', 'friends', 'public'];
-
         if (!validTypesVisibility.includes(visibility)) {
-            return res.status(400).json({ status: 'error', message: `Type must be one of the following: ${validTypes.join(', ')}.` });
+            console.log("Visibility validation failed");
+            return res.status(400).json({ status: 'error', message: `Visibility must be one of the following: ${validTypesVisibility.join(', ')}.` });
         }
 
-        // Optional ratings validation and calculation of overall rating
-        const ratings = [comfort_rating, noise_rating, cleanliness_rating, accessibility_rating, safety_rating];
-        const validRatings = ratings.filter(r => !isNaN(Number(r)) && Number(r) >= 1 && Number(r) <= 5);
+        console.log("Ratings:", ratings);
 
-        let overall_rating = null;
-        if (validRatings.length > 0) {
-            overall_rating = validRatings.reduce((sum, r) => sum + Number(r), 0) / validRatings.length;
+        if (ratings) {
+            if (typeof ratings !== 'object' || Array.isArray(ratings)) {
+                console.log("Ratings type validation failed");
+                return res.status(400).json({ status: 'error', message: 'Ratings must be an object with label-value pairs.' });
+            }
+
+            const decodedRatings: { [key: string]: number } = {};
+            for (const key in ratings) {
+                try {
+                    const decodedKey = iconv.decode(Buffer.from(key, 'binary'), 'utf-8');
+                    const rating = Number(ratings[key]);
+                    if (isNaN(rating) || rating < 1 || rating > 5) {
+                        console.log(`Rating validation failed for ${decodedKey}`);
+                        return res.status(400).json({ status: 'error', message: `Rating for ${decodedKey} must be a number between 1 and 5.` });
+                    }
+                    decodedRatings[decodedKey] = rating; // Update the ratings object with decoded keys
+                    console.log(`Decoded key: ${decodedKey}, Rating: ${rating}`);
+                } catch (e) {
+                    console.log("Error decoding key:", e);
+                    return res.status(400).json({ status: 'error', message: 'Error decoding rating labels.' });
+                }
+            }
+            ratings = decodedRatings; // Replace the original ratings with decoded ratings
         }
 
         req.body.title = title;
@@ -61,15 +97,11 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
         req.body.latitude = latitude;
         req.body.longitude = longitude;
         req.body.type = type;
-        req.body.comfort_rating = comfort_rating ? Number(comfort_rating) : null;
-        req.body.noise_rating = noise_rating ? Number(noise_rating) : null;
-        req.body.cleanliness_rating = cleanliness_rating ? Number(cleanliness_rating) : null;
-        req.body.accessibility_rating = accessibility_rating ? Number(accessibility_rating) : null;
-        req.body.safety_rating = safety_rating ? Number(safety_rating) : null;
-        req.body.overall_rating = overall_rating;
+        req.body.ratings = ratings; // Les ratings sont maintenant un objet avec des labels et leurs valeurs
         req.body.comment = comment;
         req.body.visibility = visibility;
 
+        console.log("Validation passed", req.body);
         next();
     });
 };
