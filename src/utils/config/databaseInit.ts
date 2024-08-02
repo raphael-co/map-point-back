@@ -93,7 +93,6 @@ CREATE TABLE IF NOT EXISTS Markers (
     longitude DECIMAL(9, 6) NOT NULL,
     visibility ENUM('private', 'friends', 'public') DEFAULT 'public',
     type ENUM('park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other') NOT NULL,
-    comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
