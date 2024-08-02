@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS MarkerComments (
     marker_id INT NOT NULL,
     user_id INT NOT NULL,
     comment TEXT NOT NULL,
+    rating TINYINT(1) NOT NULL CHECK (rating BETWEEN 1 AND 5) DEFAULT 3,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (marker_id) REFERENCES Markers(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
