@@ -115,11 +115,11 @@ CREATE TABLE IF NOT EXISTS MarkerComments (
     marker_id INT NOT NULL,
     user_id INT NOT NULL,
     comment TEXT NOT NULL,
-    rating TINYINT(1) NOT NULL CHECK (rating BETWEEN 1 AND 5) DEFAULT 3,
+    rating TINYINT(1) NOT NULL DEFAULT 3,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (marker_id) REFERENCES Markers(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`;
 
 // New table to store rating labels for each marker type
 const createRatingLabelsTable = `

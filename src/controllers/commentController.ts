@@ -7,6 +7,10 @@ export const addComment = async (req: Request, res: Response) => {
     const { marker_id, comment, rating } = req.body;
     const userId = req.user?.id;
 
+    if (rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
     try {
         const connection = await pool.getConnection();
         // Vérifiez si l'utilisateur a déjà commenté ce marqueur
@@ -33,10 +37,33 @@ export const addComment = async (req: Request, res: Response) => {
     }
 };
 
+// Récupérer les commentaires d'un marqueur
+export const getComments = async (req: Request, res: Response) => {
+    const { marker_id } = req.params;
+
+    try {
+        const connection = await pool.getConnection();
+        const [comments] = await connection.query<RowDataPacket[]>(
+            'SELECT MarkerComments.*, users.username FROM MarkerComments JOIN users ON MarkerComments.user_id = users.id WHERE marker_id = ?',
+            [marker_id]
+        );
+        connection.release();
+
+        res.status(200).json(comments);
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 // Mettre à jour un commentaire
 export const updateComment = async (req: Request, res: Response) => {
     const { comment_id, comment, rating } = req.body;
     const userId = req.user?.id;
+
+    if (rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
 
     try {
         const connection = await pool.getConnection();
@@ -66,25 +93,6 @@ export const updateComment = async (req: Request, res: Response) => {
         res.status(200).json({ message: 'Comment updated successfully' });
     } catch (error) {
         console.error('Error updating comment:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
-
-// Récupérer les commentaires d'un marqueur
-export const getComments = async (req: Request, res: Response) => {
-    const { marker_id } = req.params;
-
-    try {
-        const connection = await pool.getConnection();
-        const [comments] = await connection.query(
-            'SELECT MarkerComments.*, users.username FROM MarkerComments JOIN users ON MarkerComments.user_id = users.id WHERE marker_id = ?',
-            [marker_id]
-        );
-        connection.release();
-
-        res.status(200).json(comments);
-    } catch (error) {
-        console.error('Error fetching comments:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
