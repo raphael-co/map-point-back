@@ -127,11 +127,15 @@ export const googleAuthController = async (req: Request, res: Response) => {
     const { token } = req.body;
 
     try {
-        console.debug('Verifying Google ID token');
+        console.debug('Verifying Google ID token:', token);
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: GOOGLE_CLIENT_ID,
+        }).catch(err => {
+            console.error('Error verifying ID token:', err);
+            throw new Error('Invalid token format');
         });
+
         const payload = ticket.getPayload();
 
         if (!payload) {
