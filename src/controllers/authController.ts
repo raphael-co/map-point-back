@@ -128,14 +128,18 @@ export const googleAuthController = async (req: Request, res: Response) => {
 
     try {
         console.debug('Verifying Google ID token:', token);
+
+        // Validate the structure of the ID token
+        const tokenSegments = token.split('.');
+        if (tokenSegments.length !== 3) {
+            console.error('Invalid token format');
+            return res.status(400).json({ status: 'error', message: 'Invalid token format' });
+        }
+
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: GOOGLE_CLIENT_ID,
-        }).catch(err => {
-            console.error('Error verifying ID token:', err);
-            throw new Error('Invalid token format');
         });
-
         const payload = ticket.getPayload();
 
         if (!payload) {
