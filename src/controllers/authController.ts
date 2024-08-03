@@ -127,6 +127,7 @@ export const googleAuthController = async (req: Request, res: Response) => {
     const { token } = req.body;
 
     try {
+        console.debug('Verifying Google ID token');
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: GOOGLE_CLIENT_ID,
@@ -134,29 +135,37 @@ export const googleAuthController = async (req: Request, res: Response) => {
         const payload = ticket.getPayload();
 
         if (!payload) {
+            console.debug('Invalid token payload');
             return res.status(400).json({ status: 'error', message: 'Invalid token' });
         }
 
         const { sub: googleId, email, name, picture } = payload;
+        console.debug('Token payload:', payload);
 
         const connection = await pool.getConnection();
-        const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
+        console.debug('Database connection established');
+
+        const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ? AND connection_type = ?', [email, 'google']);
+        console.debug('User query result:', rows);
 
         if (rows.length === 0) {
+            console.debug('User not found, creating new user');
             await connection.query(
                 'INSERT INTO users (username, email, password, profile_image_url, connection_type) VALUES (?, ?, ?, ?, ?)',
                 [name, email, null, picture, 'google']
             );
         }
 
-        const [userRows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [email]);
+        const [userRows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ? AND connection_type = ?', [email, 'google']);
         const user = userRows[0];
+        console.debug('User found or created:', user);
         connection.release();
 
         const jwtToken = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
+        console.debug('JWT token generated:', jwtToken);
         res.status(200).json({ status: 'success', token: jwtToken, user: { id: user.id, email: user.email, username: user.username, profilePicture: user.profile_image_url } });
     } catch (error) {
-        console.error(error);
+        console.error('Internal server error:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
