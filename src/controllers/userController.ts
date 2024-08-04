@@ -63,6 +63,12 @@ export const getUserAuth = async (req: Request, res: Response) => {
         );
         const followingCount = followingCountRows[0].count;
 
+        const [nbMarker] = await connection.query<RowDataPacket[]>(
+            'SELECT COUNT(*) as count FROM Markers WHERE user_id = ?',
+            [userId]
+        );
+        const nbMarkerCount = nbMarker[0].count;
+
         connection.release();
 
         res.status(200).json({
@@ -71,6 +77,8 @@ export const getUserAuth = async (req: Request, res: Response) => {
                 ...user,
                 followers: followerCount,
                 followings: followingCount,
+                nbMarkerCount: nbMarkerCount
+                
             }
         });
     } catch (error) {
@@ -181,6 +189,11 @@ export const getUserById = async (req: Request, res: Response) => {
         const [followRequestRows] = await connection.query<RowDataPacket[]>('SELECT status FROM followings WHERE user_id = ? AND following_id = ?', [currentUserId, userId]);
         const hasRequestedFollow = followRequestRows.length > 0 && followRequestRows[0].status === 'pending';
 
+        const [nbMarker] = await connection.query<RowDataPacket[]>(
+            'SELECT COUNT(*) as count FROM Markers WHERE user_id = ? ',
+            [userId]
+        );
+        const nbMarkerCount = nbMarker[0].count;
         connection.release();
 
         res.status(200).json({
@@ -190,7 +203,8 @@ export const getUserById = async (req: Request, res: Response) => {
                 followers: followerCount,
                 followings: followingCount,
                 isFollowing,
-                hasRequestedFollow
+                hasRequestedFollow,
+                nbMarkerCount : nbMarkerCount
             }
         });
     } catch (error) {
