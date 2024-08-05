@@ -74,9 +74,11 @@ export const createMarker = async (req: Request, res: Response) => {
 
         for (const file of files) {
             const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
-                cloudinary.v2.uploader.upload_stream({  folder: 'mapPoint/profile_pictures',
+                cloudinary.v2.uploader.upload_stream({
+                    folder: 'mapPoint/profile_pictures',
                     transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
-                    resource_type: "image"}, (error, result) => {
+                    resource_type: "image"
+                }, (error, result) => {
                     if (error) {
                         console.error('Cloudinary upload error:', error);
                         reject(error);
@@ -196,3 +198,94 @@ export const getAllMarkers = async (req: Request, res: Response) => {
     }
 };
 
+
+export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
+    const connection = await pool.getConnection();
+    try {
+        const userId = req.user?.id ?? null;
+
+        if (!userId) {
+            return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+        }
+
+        const [markers] = await connection.query<RowDataPacket[]>(
+            `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
+                    m.type, m.comment, m.visibility, 
+                    IFNULL(
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT('url', mi.image_url)
+                        ),
+                        JSON_ARRAY()
+                    ) as images
+                FROM Markers m
+                LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
+                WHERE m.user_id = ?
+                GROUP BY m.id`,
+            [userId]
+        );
+        
+        const formattedMarkers = markers.map(marker => ({
+            ...marker,
+            images: JSON.parse(marker.images)
+        }));
+
+        connection.release();
+
+        res.status(200).json({ status: 'success', data: formattedMarkers });
+    } catch (err) {
+        connection.release();
+        console.error('Error fetching markers:', err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+}
+
+export const getMarkersByUser = async (req: Request, res: Response) => {
+    const connection = await pool.getConnection();
+    try {
+        const currentUserId = req.user?.id ?? null;
+        const targetUserId = parseInt(req.params.userId, 10);
+
+        if (!currentUserId) {
+            return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+        }
+
+        // Check if the current user is an accepted follower of the target user
+        const [followerRows] = await connection.query<RowDataPacket[]>(
+            `SELECT status FROM followers WHERE user_id = ? AND follower_id = ? AND status = 'accepted'`,
+            [targetUserId, currentUserId]
+        );
+
+        const isFollower = followerRows.length > 0;
+
+        // Get markers based on the visibility and follower status
+        const [markers] = await connection.query<RowDataPacket[]>(
+            `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
+                    m.type, m.comment, m.visibility, 
+                    IFNULL(
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT('url', mi.image_url)
+                        ),
+                        JSON_ARRAY()
+                    ) as images
+                FROM Markers m
+                LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
+                WHERE m.user_id = ?
+                AND (m.visibility = 'public' OR (m.visibility = 'friends' AND ?))
+                GROUP BY m.id`,
+            [targetUserId, isFollower]
+        );
+
+        const formattedMarkers = markers.map(marker => ({
+            ...marker,
+            images: JSON.parse(marker.images)
+        }));
+
+        connection.release();
+
+        res.status(200).json({ status: 'success', data: formattedMarkers });
+    } catch (err) {
+        connection.release();
+        console.error('Error fetching markers:', err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
