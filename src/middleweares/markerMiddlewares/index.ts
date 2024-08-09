@@ -104,4 +104,108 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
         console.log("Validation passed", req.body);
         next();
     });
+}
+
+export const validateUpdateMarker = (req: Request, res: Response, next: NextFunction) => {
+    console.log("validateUpdateMarker - Start", req.body);
+    upload(req, res, (err) => {
+        if (err) {
+            console.log('File upload error:', err);
+            return res.status(400).json({ status: 'error', message: 'File upload error' });
+        }
+
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ status: 'error', message: 'Marker ID is required.' });
+        }
+
+        let { visibility, title, description, latitude, longitude, type, ratings, comment } = req.body;
+
+        if (!title && !latitude && !longitude && !type && !visibility && !comment && !ratings) {
+            return res.status(400).json({ status: 'error', message: 'At least one field must be provided for update.' });
+        }
+
+        try {
+            // Decode fields if provided
+            if (title) title = iconv.decode(Buffer.from(title.trim(), 'binary'), 'utf-8');
+            if (description) description = iconv.decode(Buffer.from(description.trim(), 'binary'), 'utf-8');
+            if (comment) comment = iconv.decode(Buffer.from(comment.trim(), 'binary'), 'utf-8');
+            if (type) type = iconv.decode(Buffer.from(type.trim(), 'binary'), 'utf-8');
+
+            console.log("Decoded title:", title);
+            console.log("Decoded description:", description);
+            console.log("Decoded comment:", comment);
+            console.log("Decoded type:", type);
+        } catch (e) {
+            console.log("Error decoding URI components:", e);
+            return res.status(400).json({ status: 'error', message: 'Error decoding input fields.' });
+        }
+
+        if (title && title.length > 255) {
+            console.log("Title length validation failed");
+            return res.status(400).json({ status: 'error', message: 'Title must be 255 characters or less.' });
+        }
+
+        if ((latitude && isNaN(Number(latitude))) || (longitude && isNaN(Number(longitude)))) {
+            console.log("Latitude/Longitude validation failed");
+            return res.status(400).json({ status: 'error', message: 'Latitude and longitude must be valid numbers.' });
+        }
+
+        if (latitude) latitude = parseFloat(latitude);
+        if (longitude) longitude = parseFloat(longitude);
+
+        console.log("Parsed latitude:", latitude);
+        console.log("Parsed longitude:", longitude);
+
+        const validTypes = ['park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other'];
+        if (type && !validTypes.includes(type)) {
+            console.log("Type validation failed");
+            return res.status(400).json({ status: 'error', message: `Type must be one of the following: ${validTypes.join(', ')}.` });
+        }
+
+        const validTypesVisibility = ['private', 'friends', 'public'];
+        if (visibility && !validTypesVisibility.includes(visibility)) {
+            console.log("Visibility validation failed");
+            return res.status(400).json({ status: 'error', message: `Visibility must be one of the following: ${validTypesVisibility.join(', ')}.` });
+        }
+
+        console.log("Ratings:", ratings);
+
+        if (ratings) {
+            if (typeof ratings !== 'object' || Array.isArray(ratings)) {
+                console.log("Ratings type validation failed");
+                return res.status(400).json({ status: 'error', message: 'Ratings must be an object with label-value pairs.' });
+            }
+
+            const decodedRatings: { [key: string]: number } = {};
+            for (const key in ratings) {
+                try {
+                    const decodedKey = iconv.decode(Buffer.from(key, 'binary'), 'utf-8');
+                    const rating = Number(ratings[key]);
+                    if (isNaN(rating) || rating < 1 || rating > 5) {
+                        console.log(`Rating validation failed for ${decodedKey}`);
+                        return res.status(400).json({ status: 'error', message: `Rating for ${decodedKey} must be a number between 1 and 5.` });
+                    }
+                    decodedRatings[decodedKey] = rating; // Update the ratings object with decoded keys
+                    console.log(`Decoded key: ${decodedKey}, Rating: ${rating}`);
+                } catch (e) {
+                    console.log("Error decoding key:", e);
+                    return res.status(400).json({ status: 'error', message: 'Error decoding rating labels.' });
+                }
+            }
+            ratings = decodedRatings; // Replace the original ratings with decoded ratings
+        }
+
+        req.body.title = title;
+        req.body.description = description;
+        req.body.latitude = latitude;
+        req.body.longitude = longitude;
+        req.body.type = type;
+        req.body.ratings = ratings; // Les ratings sont maintenant un objet avec des labels et leurs valeurs
+        req.body.comment = comment;
+        req.body.visibility = visibility;
+
+        console.log("Validation passed", req.body);
+        next();
+    });
 };

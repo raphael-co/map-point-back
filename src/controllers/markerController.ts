@@ -223,7 +223,7 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
                 GROUP BY m.id`,
             [userId]
         );
-        
+
         const formattedMarkers = markers.map(marker => ({
             ...marker,
             images: JSON.parse(marker.images)
@@ -257,27 +257,31 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
 
         const isFollower = followerRows.length > 0;
 
-        // Get markers based on the visibility and follower status
+        // Get markers along with the number of comments, average rating, and average comment rating using subqueries
         const [markers] = await connection.query<RowDataPacket[]>(
             `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
-                    m.type, m.comment, m.visibility, 
+                    m.type, m.visibility, 
                     IFNULL(
-                        JSON_ARRAYAGG(
-                            JSON_OBJECT('url', mi.image_url)
-                        ),
+                        (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
+                         FROM MarkerImages mi 
+                         WHERE mi.marker_id = m.id),
                         JSON_ARRAY()
-                    ) as images
+                    ) as images,
+                    (SELECT COUNT(*) FROM MarkerComments mc WHERE mc.marker_id = m.id) as comments_count,
+                    (SELECT IFNULL(AVG(mr.rating), 0) FROM MarkerRatings mr WHERE mr.marker_id = m.id) as average_rating,
+                    (SELECT IFNULL(AVG(mc.rating), 0) FROM MarkerComments mc WHERE mc.marker_id = m.id) as average_comment_rating
                 FROM Markers m
-                LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
                 WHERE m.user_id = ?
-                AND (m.visibility = 'public' OR (m.visibility = 'friends' AND ?))
-                GROUP BY m.id`,
+                AND (m.visibility = 'public' OR (m.visibility = 'friends' AND ?))`,
             [targetUserId, isFollower]
         );
 
         const formattedMarkers = markers.map(marker => ({
             ...marker,
-            images: JSON.parse(marker.images)
+            images: JSON.parse(marker.images),
+            comments_count: Number(marker.comments_count),
+            average_rating: Number(marker.average_rating),
+            average_comment_rating: Number(marker.average_comment_rating), // New field for average comment rating
         }));
 
         connection.release();
@@ -286,6 +290,109 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
     } catch (err) {
         connection.release();
         console.error('Error fetching markers:', err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+// Update marker function
+export const updateMarker = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { title, description, latitude, longitude, type, ratings, comment, visibility } = req.body;
+    const files = req.files as Express.Multer.File[] | undefined;
+    const userId = req.user?.id;
+
+    if (!id || !userId) {
+        return res.status(400).json({ status: 'error', message: 'Marker ID and user ID are required.' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Check if the marker exists and belongs to the user
+        const [existingMarker] = await connection.query<RowDataPacket[]>(
+            `SELECT * FROM Markers WHERE id = ? AND user_id = ?`,
+            [id, userId]
+        );
+
+        if (existingMarker.length === 0) {
+            connection.release();
+            return res.status(404).json({ status: 'error', message: 'Marker not found or unauthorized access.' });
+        }
+
+        // Update the marker's details
+        await connection.query(
+            `UPDATE Markers SET title = ?, description = ?, latitude = ?, longitude = ?, type = ?, visibility = ?, comment = ? WHERE id = ?`,
+            [title, description, latitude, longitude, type, visibility, comment, id]
+        );
+
+        // Handle ratings update
+        if (typeof ratings === 'object' && ratings !== null) {
+            for (const label in ratings) {
+                if (Object.prototype.hasOwnProperty.call(ratings, label)) {
+                    const decodedLabel = decodeURIComponent(label);
+                    const rating = Number(ratings[decodedLabel]);
+                    if (!isNaN(rating)) {
+                        const [labelResult] = await connection.query<RowDataPacket[]>('SELECT id FROM RatingLabels WHERE marker_type = ? AND label = ?', [type, decodedLabel]);
+                        if (labelResult.length > 0) {
+                            const labelId = labelResult[0].id;
+                            // Upsert the rating
+                            await connection.query(
+                                `INSERT INTO MarkerRatings (marker_id, label_id, rating) VALUES (?, ?, ?)
+                                ON DUPLICATE KEY UPDATE rating = VALUES(rating)`,
+                                [id, labelId, rating]
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle image updates
+        if (files && files.length > 0) {
+            // Fetch current images
+            const [currentImages] = await connection.query<RowDataPacket[]>(
+                `SELECT id, image_url FROM MarkerImages WHERE marker_id = ?`,
+                [id]
+            );
+
+            // Upload new images
+            for (const file of files) {
+                const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+                    cloudinary.v2.uploader.upload_stream({
+                        folder: 'mapPoint/profile_pictures',
+                        transformation: { width: 1000, height: 1000, crop: "limit" }, // Limit image size
+                        resource_type: "image"
+                    }, (error, result) => {
+                        if (error) {
+                            console.error('Cloudinary upload error:', error);
+                            reject(error);
+                        } else {
+                            resolve(result as { secure_url: string });
+                        }
+                    }).end(file.buffer);
+                });
+                await connection.query('INSERT INTO MarkerImages (marker_id, user_id, image_url) VALUES (?, ?, ?)', [id, userId, uploadResult.secure_url]);
+            }
+
+            // Delete old images from Cloudinary and database if they were replaced
+            for (const currentImage of currentImages) {
+                if (files.some(file => file.originalname === currentImage.image_url)) {
+                    // Delete the image from Cloudinary
+                    const publicId = currentImage.image_url.split('/').pop()?.split('.')[0];
+                    if (publicId) {
+                        await cloudinary.v2.uploader.destroy(`mapPoint/profile_pictures/${publicId}`);
+                    }
+                    // Delete the image record from the database
+                    await connection.query('DELETE FROM MarkerImages WHERE id = ?', [currentImage.id]);
+                }
+            }
+        }
+
+        connection.release();
+        io.emit('markersUpdated');
+        res.status(200).json({ status: 'success', message: 'Marker updated successfully' });
+    } catch (error) {
+        console.error('Error updating marker:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
