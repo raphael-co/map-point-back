@@ -1,17 +1,19 @@
 import { Router, Request, Response } from 'express';
 import pool from '../utils/config/dbConnection';
 
-import { createMarker, getAllMarkers, getAllMarkersUserConnect, getMarkersByUser } from '../controllers/markerController';
+import { createMarker, getAllMarkers, getAllMarkersUserConnect, getMarkersByUser, updateMarker } from '../controllers/markerController';
 import { authenticateToken } from '../middleweares/authMiddleweares';
-import { validateCreateMarker } from '../middleweares/markerMiddlewares';
+import { validateCreateMarker, validateUpdateMarker } from '../middleweares/markerMiddlewares';
 import { RowDataPacket } from 'mysql2';
 
 const markerRouter = Router();
 
 markerRouter.post('/create', authenticateToken, validateCreateMarker, createMarker);
 markerRouter.get('/', authenticateToken, getAllMarkers);
+markerRouter.put('/update/:id', authenticateToken, validateUpdateMarker, updateMarker); // New update route
 markerRouter.get('/user', authenticateToken, getAllMarkersUserConnect);
 markerRouter.get('/user/:userId', authenticateToken, getMarkersByUser);
+
 // Route pour ajouter plusieurs labels à un type de marqueur
 markerRouter.post('/addLabels', authenticateToken, async (req: Request, res: Response) => {
     const { markerType, labels } = req.body;
