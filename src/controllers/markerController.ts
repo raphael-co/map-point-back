@@ -210,15 +210,17 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
 
         const [markers] = await connection.query<RowDataPacket[]>(
             `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
-                    m.type, m.comment, m.visibility, 
+                    m.type, m.visibility, 
                     IFNULL(
-                        JSON_ARRAYAGG(
-                            JSON_OBJECT('url', mi.image_url)
-                        ),
+                        (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
+                         FROM MarkerImages mi 
+                         WHERE mi.marker_id = m.id),
                         JSON_ARRAY()
-                    ) as images
+                    ) as images,
+                    (SELECT COUNT(*) FROM MarkerComments mc WHERE mc.marker_id = m.id) as comments_count,
+                    (SELECT IFNULL(AVG(mr.rating), 0) FROM MarkerRatings mr WHERE mr.marker_id = m.id) as average_rating,
+                    (SELECT IFNULL(AVG(mc.rating), 0) FROM MarkerComments mc WHERE mc.marker_id = m.id) as average_comment_rating
                 FROM Markers m
-                LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
                 WHERE m.user_id = ?
                 GROUP BY m.id`,
             [userId]
@@ -226,7 +228,10 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
 
         const formattedMarkers = markers.map(marker => ({
             ...marker,
-            images: JSON.parse(marker.images)
+            images: JSON.parse(marker.images),
+            comments_count: Number(marker.comments_count),
+            average_rating: Number(marker.average_rating),
+            average_comment_rating: Number(marker.average_comment_rating), // New field for average comment rating
         }));
 
         connection.release();
@@ -237,7 +242,7 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
         console.error('Error fetching markers:', err);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
-}
+};
 
 export const getMarkersByUser = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
