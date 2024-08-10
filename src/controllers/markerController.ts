@@ -117,10 +117,10 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                 SELECT 
                     m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
                     m.type, m.comment, m.visibility, 
-                    COALESCE(
-                        JSON_ARRAYAGG(
-                            JSON_OBJECT('url', mi.image_url)
-                        ),
+                    IFNULL(
+                        (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
+                         FROM MarkerImages mi 
+                         WHERE mi.marker_id = m.id),
                         JSON_ARRAY()
                     ) as images
                 FROM Markers m
@@ -184,9 +184,15 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                 marker.ratings = ratings; // Attach the ratings and labels to each marker
             }
 
+            // Format the markers to ensure correct JSON structure
+            const formattedMarkers = markers.map(marker => ({
+                ...marker,
+                images: JSON.parse(marker.images), // Parse images into JSON array
+            }));
+
             connection.release();
 
-            res.status(200).json({ status: 'success', data: markers });
+            res.status(200).json({ status: 'success', data: formattedMarkers });
         } catch (error) {
             connection.release();
             console.error('Error fetching markers:', error);
@@ -197,6 +203,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
 
 
 export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
