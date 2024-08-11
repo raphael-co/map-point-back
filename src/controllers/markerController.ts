@@ -408,3 +408,62 @@ export const updateMarker = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
+
+export const getAllMarkersUserProfile = async (req: Request, res: Response) => {
+    const { userProfileId } = req.params; // ID du profil utilisateur ciblé
+    const userId = req.user?.id; // ID de l'utilisateur connecté
+    const connection = await pool.getConnection();
+
+    if (!userId) {
+        return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+    }
+
+    try {
+
+        // Vérifier si l'utilisateur connecté est un follower accepté de l'utilisateur cible
+        const [followerRows] = await connection.query<RowDataPacket[]>(
+            `SELECT status FROM followers WHERE user_id = ? AND follower_id = ? AND status = 'accepted'`,
+            [userProfileId, userId]
+        );
+
+        const isFollower = followerRows.length > 0;
+
+        // Récupérer les marqueurs publics et les marqueurs de type "friends" si l'utilisateur est un follower accepté
+        const [markers] = await connection.query<RowDataPacket[]>(
+            `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
+                    m.type, m.visibility, 
+                    IFNULL(
+                        (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
+                         FROM MarkerImages mi 
+                         WHERE mi.marker_id = m.id),
+                        JSON_ARRAY()
+                    ) as images,
+                    (SELECT COUNT(*) FROM MarkerComments mc WHERE mc.marker_id = m.id) as comments_count,
+                    (SELECT IFNULL(AVG(mr.rating), 0) FROM MarkerRatings mr WHERE mr.marker_id = m.id) as average_rating,
+                    (SELECT IFNULL(AVG(mc.rating), 0) FROM MarkerComments mc WHERE mc.marker_id = m.id) as average_comment_rating
+                FROM Markers m
+                WHERE m.user_id = ?
+                AND (m.visibility = 'public' OR (m.visibility = 'friends' AND ?))
+                GROUP BY m.id`,
+            [userProfileId, isFollower]
+        );
+
+        // Formater les marqueurs pour assurer une structure JSON correcte
+        const formattedMarkers = markers.map(marker => ({
+            ...marker,
+            images: JSON.parse(marker.images),
+            comments_count: Number(marker.comments_count),
+            average_rating: Number(marker.average_rating),
+            average_comment_rating: Number(marker.average_comment_rating),
+        }));
+
+        connection.release();
+
+        res.status(200).json({ status: 'success', data: formattedMarkers });
+    } catch (err) {
+        connection.release();
+        console.error('Error fetching markers:', err);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
