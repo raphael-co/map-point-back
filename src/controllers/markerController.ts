@@ -75,7 +75,7 @@ export const createMarker = async (req: Request, res: Response) => {
         for (const file of files) {
             const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
                 cloudinary.v2.uploader.upload_stream({
-                    folder: 'mapPoint/profile_pictures',
+                    folder: 'mapPoint/markers',
                     transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
                     resource_type: "image"
                 }, (error, result) => {
@@ -371,7 +371,7 @@ export const updateMarker = async (req: Request, res: Response) => {
             for (const file of files) {
                 const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
                     cloudinary.v2.uploader.upload_stream({
-                        folder: 'mapPoint/profile_pictures',
+                        folder: 'mapPoint/markers',
                         transformation: { width: 1000, height: 1000, crop: "limit" }, // Limit image size
                         resource_type: "image"
                     }, (error, result) => {
@@ -392,7 +392,7 @@ export const updateMarker = async (req: Request, res: Response) => {
                     // Delete the image from Cloudinary
                     const publicId = currentImage.image_url.split('/').pop()?.split('.')[0];
                     if (publicId) {
-                        await cloudinary.v2.uploader.destroy(`mapPoint/profile_pictures/${publicId}`);
+                        await cloudinary.v2.uploader.destroy(`mapPoint/markers/${publicId}`);
                     }
                     // Delete the image record from the database
                     await connection.query('DELETE FROM MarkerImages WHERE id = ?', [currentImage.id]);
