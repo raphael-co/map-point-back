@@ -467,3 +467,59 @@ export const getAllMarkersUserProfile = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
+
+export const getMarkersById = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const connection = await pool.getConnection();
+        try {
+            const [marker] = await connection.query<RowDataPacket[]>(
+                `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
+                        m.type, m.visibility, m.comment,
+                        IFNULL(
+                            (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
+                             FROM MarkerImages mi 
+                             WHERE mi.marker_id = m.id),
+                            JSON_ARRAY()
+                        ) as images,
+                        (SELECT IFNULL(AVG(mr.rating), 0) FROM MarkerRatings mr WHERE mr.marker_id = m.id) as average_rating,
+                        (SELECT COUNT(*) FROM MarkerComments mc WHERE mc.marker_id = m.id) as comments_count
+                 FROM Markers m
+                 WHERE m.id = ?`,
+                [id]
+            );
+
+            if (marker.length === 0) {
+                connection.release();
+                return res.status(404).json({ status: 'error', message: 'Marker not found' });
+            }
+
+            // Fetch ratings and labels for the marker
+            const [ratings] = await connection.query<RowDataPacket[]>(
+                `SELECT rl.label, mr.rating 
+                 FROM MarkerRatings mr
+                 JOIN RatingLabels rl ON mr.label_id = rl.id
+                 WHERE mr.marker_id = ?`,
+                [id]
+            );
+
+            const formattedMarker = {
+                ...marker[0],
+                images: JSON.parse(marker[0].images),
+                ratings: ratings
+            };
+
+            connection.release();
+            res.status(200).json({ status: 'success', data: formattedMarker });
+        } catch (error) {
+            connection.release();
+            console.error('Error fetching marker:', error);
+            res.status(500).json({ status: 'error', message: 'Internal server error' });
+        }
+    } catch (error) {
+        console.error('Database connection error:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+}
