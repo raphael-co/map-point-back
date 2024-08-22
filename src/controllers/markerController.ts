@@ -367,28 +367,35 @@ export const updateMarker = async (req: Request, res: Response) => {
                 [id]
             );
 
+            const currentImageUrls = currentImages.map(image => image.image_url);
+
             // Upload new images
             for (const file of files) {
-                const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
-                    cloudinary.v2.uploader.upload_stream({
-                        folder: 'mapPoint/markers',
-                        transformation: { width: 1000, height: 1000, crop: "limit" }, // Limit image size
-                        resource_type: "image"
-                    }, (error, result) => {
-                        if (error) {
-                            console.error('Cloudinary upload error:', error);
-                            reject(error);
-                        } else {
-                            resolve(result as { secure_url: string });
-                        }
-                    }).end(file.buffer);
-                });
-                await connection.query('INSERT INTO MarkerImages (marker_id, user_id, image_url) VALUES (?, ?, ?)', [id, userId, uploadResult.secure_url]);
+                const existingFile = currentImageUrls.find(url => url.includes(file.originalname));
+                if (!existingFile) {
+                    // Only upload if the image is not already uploaded
+                    const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+                        cloudinary.v2.uploader.upload_stream({
+                            folder: 'mapPoint/markers',
+                            transformation: { width: 1000, height: 1000, crop: "limit" }, // Limit image size
+                            resource_type: "image"
+                        }, (error, result) => {
+                            if (error) {
+                                console.error('Cloudinary upload error:', error);
+                                reject(error);
+                            } else {
+                                resolve(result as { secure_url: string });
+                            }
+                        }).end(file.buffer);
+                    });
+                    await connection.query('INSERT INTO MarkerImages (marker_id, user_id, image_url) VALUES (?, ?, ?)', [id, userId, uploadResult.secure_url]);
+                }
             }
 
-            // Delete old images from Cloudinary and database if they were replaced
+            // Delete old images that are not in the new files
             for (const currentImage of currentImages) {
-                if (files.some(file => file.originalname === currentImage.image_url)) {
+                const fileToDelete = files.some(file => file.originalname === currentImage.image_url.split('/').pop());
+                if (!fileToDelete) {
                     // Delete the image from Cloudinary
                     const publicId = currentImage.image_url.split('/').pop()?.split('.')[0];
                     if (publicId) {
