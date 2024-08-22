@@ -347,12 +347,26 @@ export const updateMarker = async (req: Request, res: Response) => {
                         const [labelResult] = await connection.query<RowDataPacket[]>('SELECT id FROM RatingLabels WHERE marker_type = ? AND label = ?', [type, decodedLabel]);
                         if (labelResult.length > 0) {
                             const labelId = labelResult[0].id;
-                            // Upsert the rating
-                            await connection.query(
-                                `INSERT INTO MarkerRatings (marker_id, label_id, rating) VALUES (?, ?, ?)
-                                ON DUPLICATE KEY UPDATE rating = VALUES(rating)`,
-                                [id, labelId, rating]
+
+                            // Check if the rating already exists for this marker and label
+                            const [existingRating] = await connection.query<RowDataPacket[]>(
+                                'SELECT * FROM MarkerRatings WHERE marker_id = ? AND label_id = ?',
+                                [id, labelId]
                             );
+
+                            if (existingRating.length > 0) {
+                                // Update the existing rating
+                                await connection.query(
+                                    'UPDATE MarkerRatings SET rating = ? WHERE marker_id = ? AND label_id = ?',
+                                    [rating, id, labelId]
+                                );
+                            } else {
+                                // Insert new rating
+                                await connection.query(
+                                    'INSERT INTO MarkerRatings (marker_id, label_id, rating) VALUES (?, ?, ?)',
+                                    [id, labelId, rating]
+                                );
+                            }
                         }
                     }
                 }
