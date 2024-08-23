@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createMarker, getAllMarkers, getAllMarkersUserConnect, getMarkersById, getMarkersByUser, updateMarker } from '../controllers/markerController';
+import { createMarker, deleteMarker, getAllMarkers, getAllMarkersUserConnect, getMarkersById, getMarkersByUser, updateMarker } from '../controllers/markerController';
 import { authenticateToken } from '../middleweares/authMiddleweares';
 import { validateCreateMarker, validateUpdateMarker } from '../middleweares/markerMiddlewares';
 import { addLabels ,getLabelsWithMarkerType} from '../controllers/labelController';
@@ -20,5 +20,7 @@ markerRouter.post('/addLabels', authenticateToken, addLabels);
 
 // Route pour récupérer les labels en fonction du type de marqueur
 markerRouter.get('/labels/:markerType', authenticateToken, getLabelsWithMarkerType);
+
+markerRouter.delete('/delete/:id', authenticateToken, deleteMarker);
 
 export default markerRouter;

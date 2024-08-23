@@ -544,3 +544,60 @@ export const getMarkersById = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 }
+
+export const deleteMarker = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!id || !userId) {
+        return res.status(400).json({ status: 'error', message: 'Marker ID and user ID are required.' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Check if the marker exists and belongs to the user
+        const [existingMarker] = await connection.query<RowDataPacket[]>(
+            `SELECT * FROM Markers WHERE id = ? AND user_id = ?`,
+            [id, userId]
+        );
+
+        if (existingMarker.length === 0) {
+            connection.release();
+            return res.status(404).json({ status: 'error', message: 'Marker not found or unauthorized access.' });
+        }
+
+        // Fetch images associated with the marker
+        const [images] = await connection.query<RowDataPacket[]>(
+            `SELECT id, image_url FROM MarkerImages WHERE marker_id = ?`,
+            [id]
+        );
+
+        // Delete images from Cloudinary
+        for (const image of images) {
+            const publicId = image.image_url.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.v2.uploader.destroy(`mapPoint/markers/${publicId}`);
+            }
+        }
+
+        // Delete image records from the database
+        await connection.query('DELETE FROM MarkerImages WHERE marker_id = ?', [id]);
+
+        // Delete ratings associated with the marker
+        await connection.query('DELETE FROM MarkerRatings WHERE marker_id = ?', [id]);
+
+        // Delete comments associated with the marker
+        await connection.query('DELETE FROM MarkerComments WHERE marker_id = ?', [id]);
+
+        // Finally, delete the marker itself
+        await connection.query('DELETE FROM Markers WHERE id = ? AND user_id = ?', [id, userId]);
+
+        connection.release();
+        io.emit('markersUpdated');
+        res.status(200).json({ status: 'success', message: 'Marker deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting marker:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
