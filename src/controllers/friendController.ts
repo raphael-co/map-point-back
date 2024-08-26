@@ -36,7 +36,7 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
          const notificationContent = `${username} vous a envoyé une demande d'ami.`;
  
          // Envoyer une notification en utilisant notifyFollowers
-         await notifyUser(userId,friendId, 'friend_request', notificationContent);
+         await notifyUser(userId,friendId, 'follow', notificationContent);
 
         res.status(201).json({ status: 'success', message: 'Friend request sent successfully' });
     } catch (error) {

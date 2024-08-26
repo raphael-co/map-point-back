@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     receiver_user_id INT NOT NULL,  -- Utilisateur qui reçoit la notification
     sender_user_id INT NOT NULL,    -- Utilisateur qui envoie la notification
-    type ENUM('follow', 'like', 'comment', 'mention', 'other') NOT NULL,
+    type ENUM('follow', 'following','like', 'comment', 'mention', 'marker', 'other') NOT NULL,
     content TEXT,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
