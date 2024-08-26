@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import { getUsernameById } from '../utils/userUtils';
-import { notifyFollowers } from './notificationsCoontroller';
+import { notifyUser } from './notificationsCoontroller';
 
 export const sendFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
@@ -36,7 +36,7 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
          const notificationContent = `${username} vous a envoyé une demande d'ami.`;
  
          // Envoyer une notification en utilisant notifyFollowers
-         await notifyFollowers(userId, 'friend_request', notificationContent, 'pending');
+         await notifyUser(userId,friendId, 'friend_request', notificationContent);
 
         res.status(201).json({ status: 'success', message: 'Friend request sent successfully' });
     } catch (error) {

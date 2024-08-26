@@ -166,3 +166,33 @@ export const notifyFollowers = async (userId: number, type: string, content: str
         connection.release();
     }
 };
+
+export const notifyUser = async (userId: number, idReceiver: number, type: string, content: string): Promise<void> => {
+    const connection: PoolConnection = await pool.getConnection();
+
+    try {
+        // Insérer la notification dans la base de données pour le destinataire spécifié
+        const [result] = await connection.query(
+            'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
+            [idReceiver, userId, type, content]
+        );
+
+        console.log('Notification inserted for receiver:', idReceiver, result);
+
+        // Envoyer une notification en temps réel via Socket.IO
+        io.to(`user_${idReceiver}`).emit('getNotification', {
+            senderUserId: userId,
+            type: type,
+            content: content,
+            timestamp: new Date()
+        });
+
+        console.log('Notification sent to user:', idReceiver);
+        
+    } catch (error) {
+        console.error('Error notifying user:', error);
+        throw error; // Laisser l'appelant gérer les erreurs
+    } finally {
+        connection.release();
+    }
+};
