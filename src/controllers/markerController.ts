@@ -15,12 +15,6 @@ cloudinary.v2.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-let io: SocketIOServer;
-
-export const setSocketServer = (ioInstance: SocketIOServer) => {
-    io = ioInstance;
-};
-
 export const createMarker = async (req: Request, res: Response) => {
     console.log("createMarker - Start", req.body);
     const { title, description, latitude, longitude, type, ratings, comment, visibility } = req.body;
@@ -102,7 +96,7 @@ export const createMarker = async (req: Request, res: Response) => {
         notifyFollowers(userId, 'new_marker', `User ${userId} added a new marker titled "${title}".`,'accepted');
 
         connection.release();
-        io.emit('markersUpdated');
+        // io.emit('markersUpdated');
     } catch (error) {
         console.error('Error creating marker:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -430,7 +424,7 @@ export const updateMarker = async (req: Request, res: Response) => {
         }
 
         connection.release();
-        io.emit('markersUpdated');
+        // io.emit('markersUpdated');
         res.status(200).json({ status: 'success', message: 'Marker updated successfully' });
     } catch (error) {
         console.error('Error updating marker:', error);
@@ -602,7 +596,7 @@ export const deleteMarker = async (req: Request, res: Response) => {
         await connection.query('DELETE FROM Markers WHERE id = ? AND user_id = ?', [id, userId]);
 
         connection.release();
-        io.emit('markersUpdated');
+        // io.emit('markersUpdated');
         res.status(200).json({ status: 'success', message: 'Marker deleted successfully' });
     } catch (error) {
         console.error('Error deleting marker:', error);
