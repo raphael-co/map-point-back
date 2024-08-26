@@ -156,6 +156,9 @@ export const notifyFollowers = async (userId: number, type: string, content: str
 
         // Exécuter toutes les insertions de notifications et les émissions de sockets en parallèle
         await Promise.all(notificationPromises);
+
+        console.log('Notifications sent successfully');
+        
     } catch (error) {
         console.error('Error notifying followers:', error);
         throw error; // Laisser l'appelant gérer les erreurs
