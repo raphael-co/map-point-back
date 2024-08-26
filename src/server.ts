@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import routes from './routes/routes';
 import { initializeDatabase } from './utils/config/databaseInit';
-import { setSocketServer } from './controllers/markerController';
+import { setSocketServer } from './controllers/setSocketServer';
 
 const app = express();
 const port = 3000;
@@ -35,6 +35,9 @@ const io = new SocketIOServer(server, {
     }
 });
 
+// Set the Socket.IO server instance
+setSocketServer(io);
+
 // Set up Socket.IO connection
 io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
@@ -48,9 +51,6 @@ io.on('connection', (socket) => {
         console.log(`Client disconnected: ${socket.id}`);
     });
 });
-
-// Set the Socket.IO server instance
-setSocketServer(io);
 
 // Start the server
 server.listen(port, async () => {

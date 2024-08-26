@@ -2,13 +2,8 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import { PoolConnection } from 'mysql2/promise';
-import { Server as SocketIOServer } from 'socket.io';
+import { io } from './setSocketServer'; // Assurez-vous que l'import est correct
 
-let io: SocketIOServer;
-
-export const setSocketServer = (ioInstance: SocketIOServer) => {
-    io = ioInstance;
-};
 // Récupérer toutes les notifications pour un utilisateur
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
@@ -35,7 +30,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 
         res.status(200).json({ status: 'success', notifications });
     } catch (error) {
-        console.error(error);
+        console.error('Error fetching notifications:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
@@ -61,9 +56,19 @@ export const createNotification = async (req: Request, res: Response) => {
         );
         connection.release();
 
+        // Envoyer une notification en temps réel via Socket.IO
+        if (io) {
+            io.to(`user_${receiverUserId}`).emit('getNotification', {
+                senderUserId: senderUserId,
+                type: type,
+                content: content,
+                timestamp: new Date()
+            });
+        }
+
         res.status(201).json({ status: 'success', message: 'Notification created successfully' });
     } catch (error) {
-        console.error(error);
+        console.error('Error creating notification:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
@@ -91,7 +96,7 @@ export const markNotificationAsRead = async (req: Request, res: Response) => {
 
         res.status(200).json({ status: 'success', message: 'Notification marked as read' });
     } catch (error) {
-        console.error(error);
+        console.error('Error marking notification as read:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
@@ -119,59 +124,56 @@ export const deleteNotification = async (req: Request, res: Response) => {
 
         res.status(200).json({ status: 'success', message: 'Notification deleted successfully' });
     } catch (error) {
-        console.error(error);
+        console.error('Error deleting notification:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
 
-
+// Notifier tous les followers
 export const notifyFollowers = async (userId: number, type: string, content: string, accepted: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
 
     try {
-        // Récupérer tous les followers de l'utilisateur
         const [followers] = await connection.query<RowDataPacket[]>(
             'SELECT follower_id FROM followers WHERE user_id = ? AND status = ?',
             [userId, accepted]
         );
 
-        // Créer une notification pour chaque follower et envoyer un message via socket.io
         const notificationPromises = followers.map(async (follower) => {
             const followerId = follower.follower_id;
 
-            // Insérer la notification dans la base de données
             await connection.query(
                 'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
                 [followerId, userId, type, content]
             );
 
-            // Envoyer une notification en temps réel via Socket.IO
-            io.to(`user_${followerId}`).emit('getNotification', {
-                senderUserId: userId,
-                type: type,
-                content: content,
-                timestamp: new Date()
-            });
+            if (io) {
+                io.to(`user_${followerId}`).emit('getNotification', {
+                    senderUserId: userId,
+                    type: type,
+                    content: content,
+                    timestamp: new Date()
+                });
+            }
         });
 
-        // Exécuter toutes les insertions de notifications et les émissions de sockets en parallèle
         await Promise.all(notificationPromises);
 
         console.log('Notifications sent successfully');
         
     } catch (error) {
         console.error('Error notifying followers:', error);
-        throw error; // Laisser l'appelant gérer les erreurs
+        throw error;
     } finally {
         connection.release();
     }
 };
 
+// Notifier un utilisateur spécifique
 export const notifyUser = async (userId: number, idReceiver: number, type: string, content: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
 
     try {
-        // Insérer la notification dans la base de données pour le destinataire spécifié
         const [result] = await connection.query(
             'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
             [idReceiver, userId, type, content]
@@ -179,19 +181,22 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
 
         console.log('Notification inserted for receiver:', idReceiver, result);
 
-        // Envoyer une notification en temps réel via Socket.IO
-        io.to(`user_${idReceiver}`).emit('getNotification', {
-            senderUserId: userId,
-            type: type,
-            content: content,
-            timestamp: new Date()
-        });
+        if (io) {
+            io.to(`user_${idReceiver}`).emit('getNotification', {
+                senderUserId: userId,
+                type: type,
+                content: content,
+                timestamp: new Date()
+            });
 
-        console.log('Notification sent to user:', idReceiver);
+            console.log('Notification sent to user:', idReceiver);
+        } else {
+            console.error('Socket.IO instance is not initialized.');
+        }
         
     } catch (error) {
         console.error('Error notifying user:', error);
-        throw error; // Laisser l'appelant gérer les erreurs
+        throw error;
     } finally {
         connection.release();
     }
