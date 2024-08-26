@@ -141,6 +141,19 @@ CREATE TABLE IF NOT EXISTS MarkerRatings (
     FOREIGN KEY (label_id) REFERENCES RatingLabels(id)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+const createNotificationsTable = `
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    receiver_user_id INT NOT NULL,  -- Utilisateur qui reçoit la notification
+    sender_user_id INT NOT NULL,    -- Utilisateur qui envoie la notification
+    type ENUM('follow', 'like', 'comment', 'mention', 'other') NOT NULL,
+    content TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (receiver_user_id) REFERENCES users(id),
+    FOREIGN KEY (sender_user_id) REFERENCES users(id)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     try {
@@ -155,7 +168,7 @@ export const initializeDatabase = async (): Promise<void> => {
         const markerCommentsTableExists = await checkTableExists('MarkerComments');
         const ratingLabelsTableExists = await checkTableExists('RatingLabels');
         const markerRatingsTableExists = await checkTableExists('MarkerRatings');
-
+        const notificationsTableExists = await checkTableExists('notifications');
         if (!usersTableExists) {
             await connection.query(createUsersTable);
             console.log("Users table created successfully");
@@ -231,6 +244,13 @@ export const initializeDatabase = async (): Promise<void> => {
             console.log("MarkerRatings table created successfully");
         } else {
             console.log("MarkerRatings table already exists");
+        }
+
+        if (!notificationsTableExists) {
+            await connection.query(createNotificationsTable);
+            console.log("Notifications table created successfully");
+        } else {
+            console.log("Notifications table already exists");
         }
 
     } catch (error) {

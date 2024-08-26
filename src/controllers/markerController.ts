@@ -4,6 +4,7 @@ import pool from '../utils/config/dbConnection';
 import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
 import { Server as SocketIOServer } from 'socket.io';
+import { notifyFollowers } from './notificationsCoontroller';
 
 dotenv.config();
 
@@ -33,7 +34,7 @@ export const createMarker = async (req: Request, res: Response) => {
         return res.status(400).json({ status: 'error', message: 'At least two images are required.' });
     }
 
-    const userId = req.user?.id;
+    const userId = req.user!.id;
 
     try {
         const connection = await pool.getConnection();
@@ -72,8 +73,8 @@ export const createMarker = async (req: Request, res: Response) => {
             }
         }
 
-        for (const file of files) {
-            const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+        const imageUploadPromises = files.map(file =>
+            new Promise<{ secure_url: string }>((resolve, reject) => {
                 cloudinary.v2.uploader.upload_stream({
                     folder: 'mapPoint/markers',
                     transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
@@ -86,20 +87,27 @@ export const createMarker = async (req: Request, res: Response) => {
                         resolve(result as { secure_url: string });
                     }
                 }).end(file.buffer);
-            });
-            await connection.query('INSERT INTO MarkerImages (marker_id, user_id, image_url) VALUES (?, ?, ?)', [markerId, userId, uploadResult.secure_url]);
-            console.log(`Image uploaded and saved: ${uploadResult.secure_url}`);
-        }
+            }).then(uploadResult =>
+                connection.query('INSERT INTO MarkerImages (marker_id, user_id, image_url) VALUES (?, ?, ?)', [markerId, userId, uploadResult.secure_url])
+            )
+        );
+
+        // Répondre au client immédiatement avant de gérer les notifications
+        res.status(201).json({ status: 'success', message: 'Marker created successfully', markerId });
+
+        // Commencer le traitement des images
+        await Promise.all(imageUploadPromises);
+
+        // Notifier les followers
+        notifyFollowers(userId, 'new_marker', `User ${userId} added a new marker titled "${title}".`,'accepted');
 
         connection.release();
         io.emit('markersUpdated');
-        res.status(201).json({ status: 'success', message: 'Marker created successfully', markerId });
     } catch (error) {
         console.error('Error creating marker:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
-
 
 
 export const getAllMarkers = async (req: Request, res: Response) => {

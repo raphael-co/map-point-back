@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import { getUsernameById } from '../utils/userUtils';
+import { notifyFollowers } from './notificationsCoontroller';
 
 export const sendFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
-    const userId = req.user?.id;
+    const userId = req.user!.id;
 
     try {
         const connection = await pool.getConnection();
@@ -29,6 +30,14 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         // Envoyer une nouvelle demande de suivi
         await connection.query('INSERT INTO followings (user_id, following_id, status) VALUES (?, ?, "pending") ON DUPLICATE KEY UPDATE status="pending"', [userId, friendId]);
         connection.release();
+
+         // Créer une notification pour l'utilisateur
+         const username = await getUsernameById(userId);
+         const notificationContent = `${username} vous a envoyé une demande d'ami.`;
+ 
+         // Envoyer une notification en utilisant notifyFollowers
+         await notifyFollowers(userId, 'friend_request', notificationContent, 'pending');
+
         res.status(201).json({ status: 'success', message: 'Friend request sent successfully' });
     } catch (error) {
         console.error(error);
