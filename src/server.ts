@@ -33,6 +33,7 @@ app.use('/api', routes);
 // Create HTTP server and integrate Socket.IO
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
+    path: '/api/socket', // Set the path for Socket.IO
     cors: {
         origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
