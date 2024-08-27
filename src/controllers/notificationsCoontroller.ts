@@ -160,7 +160,7 @@ export const notifyFollowers = async (userId: number, type: string, content: str
         await Promise.all(notificationPromises);
 
         console.log('Notifications sent successfully');
-        
+
     } catch (error) {
         console.error('Error notifying followers:', error);
         throw error;
@@ -170,7 +170,7 @@ export const notifyFollowers = async (userId: number, type: string, content: str
 };
 
 // Notifier un utilisateur spécifique
-export const notifyUser = async (userId: number, idReceiver: number, type: string, content: string): Promise<void> => {
+export const notifyUser = async (userId: number, idReceiver: number, type: string, username: string | null, content: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
 
     try {
@@ -183,17 +183,18 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
 
         if (io) {
             io.to(`user_${idReceiver}`).emit('getNotification', {
-                senderUserId: userId,
+                sender_user_id: userId,
                 type: type,
+                sender_username: username ?? 'Anonymous', // Default to 'Anonymous' if null
                 content: content,
-                timestamp: new Date()
+                created_at: new Date()
             });
 
             console.log('Notification sent to user:', idReceiver);
         } else {
             console.error('Socket.IO instance is not initialized.');
         }
-        
+
     } catch (error) {
         console.error('Error notifying user:', error);
         throw error;
@@ -201,3 +202,4 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
         connection.release();
     }
 };
+

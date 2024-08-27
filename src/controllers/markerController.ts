@@ -3,7 +3,6 @@ import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
-import { Server as SocketIOServer } from 'socket.io';
 import { notifyFollowers } from './notificationsCoontroller';
 
 dotenv.config();
