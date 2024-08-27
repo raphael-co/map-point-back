@@ -34,14 +34,23 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         // Insérer dans la table followers aussi pour garder la relation cohérente
         await connection.query('INSERT INTO followers (user_id, follower_id, status) VALUES (?, ?, "pending") ON DUPLICATE KEY UPDATE status="pending"', [friendId, userId]);
 
-        connection.release();
-
         // Créer une notification pour l'utilisateur
         const username = await getUsernameById(userId);
         const notificationContent = `${username} vous a envoyé une demande d'ami.`;
 
         // Envoyer une notification en utilisant notifyFollowers
         await notifyUser(userId, friendId, 'follow', username, notificationContent);
+
+        // Émettre un événement Socket.IO pour mettre à jour la notification existante
+        if (io) {
+            io.to(`user_${friendId}`).emit('followRequestUpdated', {
+                sender_user_id: userId,
+                type: 'follow',
+                follow_status: 'null', // Indique que la demande est à nouveau en attente
+            });
+        }
+
+        connection.release();
 
         res.status(201).json({ status: 'success', message: 'Friend request sent successfully' });
     } catch (error) {
