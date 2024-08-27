@@ -4,7 +4,6 @@ import pool from '../utils/config/dbConnection';
 import { PoolConnection } from 'mysql2/promise';
 import { io } from './setSocketServer'; // Assurez-vous que l'import est correct
 
-// Récupérer toutes les notifications pour un utilisateur
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
 
@@ -15,11 +14,18 @@ export const getUserNotifications = async (req: Request, res: Response) => {
     try {
         const connection = await pool.getConnection();
         const [notifications] = await connection.query<RowDataPacket[]>(
-            'SELECT n.id, n.sender_user_id, u.username as sender_username, n.type, n.content, n.is_read, n.created_at ' +
-            'FROM notifications n ' +
-            'JOIN users u ON n.sender_user_id = u.id ' +
-            'WHERE n.receiver_user_id = ? ' +
-            'ORDER BY n.created_at DESC',
+            `SELECT n.id, n.sender_user_id, u.username as sender_username, n.type, n.content, n.is_read, n.created_at, 
+            CASE 
+                WHEN f.status = 'accepted' THEN 'true'
+                WHEN f.status = 'pending' THEN 'null'
+                WHEN f.status IS NULL THEN 'canceled'
+                ELSE 'false'
+            END as follow_status
+            FROM notifications n
+            JOIN users u ON n.sender_user_id = u.id
+            LEFT JOIN followings f ON n.sender_user_id = f.user_id AND n.receiver_user_id = f.following_id
+            WHERE n.receiver_user_id = ?
+            ORDER BY n.created_at DESC`,
             [userId]
         );
         connection.release();
@@ -169,18 +175,43 @@ export const notifyFollowers = async (userId: number, type: string, content: str
     }
 };
 
-// Notifier un utilisateur spécifique
+
 export const notifyUser = async (userId: number, idReceiver: number, type: string, username: string | null, content: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
 
     try {
-        const [result] = await connection.query(
-            'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
-            [idReceiver, userId, type, content]
+        // Vérifier si une notification similaire existe déjà
+        const [existingNotification] = await connection.query<RowDataPacket[]>(
+            'SELECT * FROM notifications WHERE receiver_user_id = ? AND sender_user_id = ? AND type = ?',
+            [idReceiver, userId, type]
         );
 
-        console.log('Notification inserted for receiver:', idReceiver, result);
+        if (existingNotification.length > 0) {
+            // Si une notification existe mais que son statut ou son contenu a changé, nous mettons à jour
+            const existingContent = existingNotification[0].content;
+            if (existingContent === content) {
+                console.log('Notification already exists with the same content for receiver:', idReceiver);
+                return; // La notification existe déjà avec le même contenu, donc on ne fait rien
+            }
 
+            // Mettre à jour le contenu de la notification existante
+            await connection.query(
+                'UPDATE notifications SET content = ? WHERE id = ?',
+                [content, existingNotification[0].id]
+            );
+
+            console.log('Notification updated for receiver:', idReceiver, existingNotification[0].id);
+        } else {
+            // Insérer la nouvelle notification si elle n'existe pas déjà
+            const [result] = await connection.query(
+                'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
+                [idReceiver, userId, type, content]
+            );
+
+            console.log('Notification inserted for receiver:', idReceiver, result);
+        }
+
+        // Envoyer la notification via Socket.IO
         if (io) {
             io.to(`user_${idReceiver}`).emit('getNotification', {
                 sender_user_id: userId,
