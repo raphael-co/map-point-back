@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
-import { getUsernameById } from '../utils/userUtils';
+import { getUserById } from '../utils/userUtils';
 import { notifyUser } from './notificationsCoontroller';
 import { io } from './setSocketServer';
 
@@ -35,11 +35,15 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         await connection.query('INSERT INTO followers (user_id, follower_id, status) VALUES (?, ?, "pending") ON DUPLICATE KEY UPDATE status="pending"', [friendId, userId]);
 
         // Créer une notification pour l'utilisateur
-        const username = await getUsernameById(userId);
-        const notificationContent = `${username} vous a envoyé une demande d'ami.`;
+        const user = await getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'User not found' });
+        }
+    
+        const notificationContent = `${user.username} vous a envoyé une demande d'ami.`;
 
         // Envoyer une notification en utilisant notifyFollowers
-        await notifyUser(userId, friendId, 'follow', username, notificationContent);
+        await notifyUser(userId, friendId, 'follow', user, notificationContent);
 
         // Émettre un événement Socket.IO pour mettre à jour la notification existante
         if (io) {
@@ -90,12 +94,12 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
 
         connection.release();
 
-        const username = await getUsernameById(friendId);
-        if (!username) {
+        const user = await getUserById(friendId);
+        if (!user) {
             return res.status(404).json({ status: 'error', message: 'User not found' });
         }
 
-        res.status(200).json({ status: 'success', message: `${username} can now see your points` });
+        res.status(200).json({ status: 'success', message: `${user.username} can now see your points` });
     } catch (error) {
         console.error(error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });

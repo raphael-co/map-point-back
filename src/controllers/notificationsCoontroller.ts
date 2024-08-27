@@ -3,6 +3,7 @@ import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import { PoolConnection } from 'mysql2/promise';
 import { io } from './setSocketServer'; // Assurez-vous que l'import est correct
+import { User } from '../utils/userUtils';
 
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
@@ -14,7 +15,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
     try {
         const connection = await pool.getConnection();
         const [notifications] = await connection.query<RowDataPacket[]>(
-            `SELECT n.id, n.sender_user_id, u.username as sender_username, n.type, n.content, n.is_read, n.created_at, 
+            `SELECT n.id, n.sender_user_id, u.username as sender_username, u.profile_image_url, n.type, n.content, n.is_read, n.created_at, 
             CASE 
                 WHEN f.status = 'accepted' THEN 'true'
                 WHEN f.status = 'pending' THEN 'null'
@@ -176,7 +177,7 @@ export const notifyFollowers = async (userId: number, type: string, content: str
 };
 
 
-export const notifyUser = async (userId: number, idReceiver: number, type: string, username: string | null, content: string): Promise<void> => {
+export const notifyUser = async (userId: number, idReceiver: number, type: string, user : User | null, content: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
 
     try {
@@ -216,7 +217,8 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
             io.to(`user_${idReceiver}`).emit('getNotification', {
                 sender_user_id: userId,
                 type: type,
-                sender_username: username ?? 'Anonymous', // Default to 'Anonymous' if null
+                sender_username: user?.username ?? 'Anonymous', // Default to 'Anonymous' if null
+                profile_image_url: user?.profile_image_url ?? null,
                 content: content,
                 created_at: new Date()
             });
