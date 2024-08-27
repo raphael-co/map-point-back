@@ -3,6 +3,7 @@ import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import { getUsernameById } from '../utils/userUtils';
 import { notifyUser } from './notificationsCoontroller';
+import { io } from './setSocketServer';
 
 export const sendFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
@@ -108,6 +109,16 @@ export const rejectFriendRequest = async (req: Request, res: Response) => {
         await connection.query('DELETE FROM followings WHERE user_id = ? AND following_id = ?', [userId, friendId]);
         await connection.query('DELETE FROM followers WHERE user_id = ? AND follower_id = ?', [friendId, userId]);
         connection.release();
+
+          // Émettre un événement Socket.IO pour mettre à jour la notification
+          if (io) {
+            io.to(`user_${friendId}`).emit('followRequestRejected', {
+                sender_user_id: userId,
+                type: 'follow',
+                follow_status: 'false', // Indique que la demande a été rejetée
+            });
+        }
+        
         res.status(200).json({ status: 'success', message: 'Unfollowed successfully' });
     } catch (error) {
         console.error(error);
