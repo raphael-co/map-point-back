@@ -99,6 +99,8 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
+    console.log('icxi');
+    
     if (!token) return res.status(401).send({ message: "Token missing", success: 'danger' });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {

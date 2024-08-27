@@ -13,7 +13,7 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
 
         // Vérifier si une demande de suivi existe déjà ou si l'utilisateur est déjà suivi
         const [rows] = await connection.query<RowDataPacket[]>(
-            'SELECT * FROM followings WHERE user_id = ? AND following_id = ?', 
+            'SELECT * FROM followings WHERE user_id = ? AND following_id = ?',
             [userId, friendId]
         );
 
@@ -29,14 +29,18 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
 
         // Envoyer une nouvelle demande de suivi
         await connection.query('INSERT INTO followings (user_id, following_id, status) VALUES (?, ?, "pending") ON DUPLICATE KEY UPDATE status="pending"', [userId, friendId]);
+
+        // Insérer dans la table followers aussi pour garder la relation cohérente
+        await connection.query('INSERT INTO followers (user_id, follower_id, status) VALUES (?, ?, "pending") ON DUPLICATE KEY UPDATE status="pending"', [friendId, userId]);
+
         connection.release();
 
-         // Créer une notification pour l'utilisateur
-         const username = await getUsernameById(userId);
-         const notificationContent = `${username} vous a envoyé une demande d'ami.`;
- 
-         // Envoyer une notification en utilisant notifyFollowers
-         await notifyUser(userId,friendId, 'follow',username, notificationContent);
+        // Créer une notification pour l'utilisateur
+        const username = await getUsernameById(userId);
+        const notificationContent = `${username} vous a envoyé une demande d'ami.`;
+
+        // Envoyer une notification en utilisant notifyFollowers
+        await notifyUser(userId, friendId, 'follow', username, notificationContent);
 
         res.status(201).json({ status: 'success', message: 'Friend request sent successfully' });
     } catch (error) {
@@ -44,6 +48,7 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
 
 export const acceptFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
@@ -58,7 +63,7 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
 
         // Vérifier si une demande de suivi en attente existe
         const [checkRequestRows] = await connection.query<RowDataPacket[]>(
-            'SELECT * FROM followings WHERE user_id = ? AND following_id = ? AND status = "pending"', 
+            'SELECT * FROM followings WHERE user_id = ? AND following_id = ? AND status = "pending"',
             [friendId, userId]
         );
 
@@ -67,13 +72,15 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
             return res.status(400).json({ status: 'error', message: 'No pending friend request from this user' });
         }
 
-        // Accepter la demande de suivi
+        // Accepter la demande de suivi dans les deux tables
         await connection.query('UPDATE followings SET status = "accepted" WHERE user_id = ? AND following_id = ?', [friendId, userId]);
-        await connection.query('UPDATE followers SET status = "accepted" WHERE user_id = ? AND follower_id = ?', [userId, friendId]);
+
+        // Vérifier si l'enregistrement existe dans followers, si ce n'est pas le cas, insérer
+        await connection.query('INSERT INTO followers (user_id, follower_id, status) VALUES (?, ?, "accepted") ON DUPLICATE KEY UPDATE status="accepted"', [userId, friendId]);
+
         connection.release();
 
         const username = await getUsernameById(friendId);
-
         if (!username) {
             return res.status(404).json({ status: 'error', message: 'User not found' });
         }
@@ -84,6 +91,7 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
 
 export const rejectFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
@@ -117,7 +125,7 @@ export const listFollowing = async (req: Request, res: Response) => {
             `SELECT u.id, u.username, u.email, u.gender, u.joined_at, u.last_login, f.status, f.followed_at 
              FROM followings f 
              JOIN users u ON f.following_id = u.id 
-             WHERE f.user_id = ?`, 
+             WHERE f.user_id = ?`,
             [userId]
         );
         connection.release();
@@ -147,7 +155,7 @@ export const listFollowers = async (req: Request, res: Response) => {
             `SELECT u.id, u.username, u.email, u.gender, u.joined_at, u.last_login, f.status, f.followed_at 
              FROM followers f 
              JOIN users u ON f.follower_id = u.id 
-             WHERE f.user_id = ?`, 
+             WHERE f.user_id = ?`,
             [userId]
         );
         connection.release();
@@ -181,7 +189,7 @@ export const listFriendRequests = async (req: Request, res: Response) => {
             `SELECT u.id, u.username, u.email, u.gender, u.joined_at, u.last_login, f.status, f.followed_at 
              FROM followings f 
              JOIN users u ON f.user_id = u.id 
-             WHERE f.following_id = ? AND f.status = "pending"`, 
+             WHERE f.following_id = ? AND f.status = "pending"`,
             [userId]
         );
         connection.release();
