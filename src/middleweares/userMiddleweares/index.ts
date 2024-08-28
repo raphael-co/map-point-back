@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import dotenv from "dotenv";
 import { UserPayload } from '../../types/express';
 import multer from 'multer';
+import getTranslation from '../../utils/translate';
 
 const upload = multer().single('profileImage');
 dotenv.config();
@@ -13,29 +14,41 @@ if (!SECRET_KEY) {
 }
 
 export const validateEditeUser = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en';  // Déterminez la langue à partir des en-têtes de requête
+
     upload(req, res, (err) => {
         if (err) {
-            return res.status(400).json({ status: 'error', message: 'File upload error' });
+            return res.status(400).json({ 
+                status: 'error', 
+                message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'userMiddlewares') 
+            });
         }
 
         let { username, gender } = req.body;
 
-
-
         if (!username) {
-            return res.status(400).json({ status: 'error', message: 'Username is required.' });
+            return res.status(400).json({ 
+                status: 'error', 
+                message: getTranslation('USERNAME_REQUIRED', language, 'middlewares', 'userMiddlewares') 
+            });
         }
         
         username = username.trim();
 
         if (username.length > 50) {
-            return res.status(400).json({ status: 'error', message: 'Username must be 50 characters or less.' });
+            return res.status(400).json({ 
+                status: 'error', 
+                message: getTranslation('USERNAME_TOO_LONG', language, 'middlewares', 'userMiddlewares') 
+            });
         }
 
         gender = gender.trim();
 
         if (!gender || !['male', 'female', 'other'].includes(gender)) {
-            return res.status(400).json({ status: 'error', message: 'Gender must be either male, female, or other.' });
+            return res.status(400).json({ 
+                status: 'error', 
+                message: getTranslation('INVALID_GENDER', language, 'middlewares', 'userMiddlewares') 
+            });
         }
 
         req.body.username = username;
@@ -46,11 +59,15 @@ export const validateEditeUser = (req: Request, res: Response, next: NextFunctio
 };
 
 export const validateChangePassword = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en';  // Déterminez la langue à partir des en-têtes de requête
+
     let { oldPassword, newPassword, confirmPassword } = req.body;
 
-
     if (!oldPassword || !newPassword || !confirmPassword) {
-        return res.status(400).json({ status: 'error', message: 'Old password and new password  and confirm password are required' });
+        return res.status(400).json({ 
+            status: 'error', 
+            message: getTranslation('PASSWORD_FIELDS_REQUIRED', language, 'middlewares', 'userMiddlewares') 
+        });
     }
 
     oldPassword = oldPassword.trim();
@@ -58,13 +75,17 @@ export const validateChangePassword = (req: Request, res: Response, next: NextFu
     confirmPassword = confirmPassword.trim();
 
     if (newPassword !== confirmPassword) {
-        return res.status(400).json({ status: 'error', message: 'New password and confirm password do not match' });
+        return res.status(400).json({ 
+            status: 'error', 
+            message: getTranslation('PASSWORD_MISMATCH', language, 'middlewares', 'userMiddlewares') 
+        });
     }
     if (newPassword.length < 8) {
-        return res.status(400).json({ status: 'error', message: 'New password must be at least 8 characters long' });
+        return res.status(400).json({ 
+            status: 'error', 
+            message: getTranslation('PASSWORD_TOO_SHORT', language, 'middlewares', 'userMiddlewares') 
+        });
     }
-
-
 
     req.body.oldPassword = oldPassword;
     req.body.newPassword = newPassword;

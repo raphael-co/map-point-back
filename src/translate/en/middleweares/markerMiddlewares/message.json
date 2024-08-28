@@ -1,0 +1,15 @@
+{
+    "FILE_UPLOAD_ERROR": "File upload error",
+    "MINIMUM_IMAGES_REQUIRED": "At least two images are required.",
+    "MAXIMUM_IMAGES_EXCEEDED": "At most five images are allowed.",
+    "REQUIRED_FIELDS_MISSING": "Title, latitude, longitude, type, and visibility are required.",
+    "DECODING_ERROR": "Error decoding input fields.",
+    "TITLE_TOO_LONG": "Title must be 255 characters or less.",
+    "INVALID_LAT_LONG": "Latitude and longitude must be valid numbers.",
+    "INVALID_TYPE": "Type must be one of the following: park, restaurant, bar, cafe, museum, monument, store, hotel, beach, other.",
+    "INVALID_VISIBILITY": "Visibility must be one of the following: private, friends, public.",
+    "INVALID_RATINGS_FORMAT": "Ratings must be an object with label-value pairs.",
+    "RATING_OUT_OF_RANGE": "Rating for {label} must be a number between 1 and 5.",
+    "DECODING_RATING_LABEL_ERROR": "Error decoding rating labels."
+  }
+  

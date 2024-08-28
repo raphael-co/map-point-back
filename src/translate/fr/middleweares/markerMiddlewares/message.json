@@ -1,0 +1,15 @@
+{
+    "FILE_UPLOAD_ERROR": "Erreur de téléchargement de fichier",
+    "MINIMUM_IMAGES_REQUIRED": "Au moins deux images sont requises.",
+    "MAXIMUM_IMAGES_EXCEEDED": "Au maximum cinq images sont autorisées.",
+    "REQUIRED_FIELDS_MISSING": "Le titre, la latitude, la longitude, le type et la visibilité sont requis.",
+    "DECODING_ERROR": "Erreur de décodage des champs de saisie.",
+    "TITLE_TOO_LONG": "Le titre doit contenir au maximum 255 caractères.",
+    "INVALID_LAT_LONG": "La latitude et la longitude doivent être des nombres valides.",
+    "INVALID_TYPE": "Le type doit être l'un des suivants : parc, restaurant, bar, café, musée, monument, magasin, hôtel, plage, autre.",
+    "INVALID_VISIBILITY": "La visibilité doit être l'une des suivantes : privé, amis, public.",
+    "INVALID_RATINGS_FORMAT": "Les évaluations doivent être un objet avec des paires clé-valeur.",
+    "RATING_OUT_OF_RANGE": "La note pour {label} doit être un nombre entre 1 et 5.",
+    "DECODING_RATING_LABEL_ERROR": "Erreur de décodage des étiquettes de notation."
+  }
+  

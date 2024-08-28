@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
-import { UserPayload } from '../../types/express';
 import multer from 'multer';
+import getTranslation from '../../utils/translate';
+
 
 const upload = multer().single('profileImage');
 dotenv.config();
@@ -14,15 +15,14 @@ if (!SECRET_KEY) {
 }
 
 export const validateLogin = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue
     let { emailAddresses, password } = req.body;
 
-  
-
     if (!emailAddresses) {
-        return res.status(400).json({ status: 'error', message: 'paths are required.' });
+        return res.status(400).json({ status: 'error', message: getTranslation('EMAIL_REQUIRED', language, 'middlewares', 'authMiddleweares') });
     }
     if (!password) {
-        return res.status(400).json({ status: 'error', message: 'password is required.' });
+        return res.status(400).json({ status: 'error', message: getTranslation('PASSWORD_REQUIRED', language, 'middlewares', 'authMiddleweares') });
     }
 
     emailAddresses = emailAddresses.trim().toLowerCase();
@@ -35,39 +35,37 @@ export const validateLogin = (req: Request, res: Response, next: NextFunction) =
 };
 
 export const validateRegister = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue
     upload(req, res, (err) => {
         if (err) {
-            return res.status(400).json({ status: 'error', message: 'File upload error' });
+            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'authMiddleweares') });
         }
 
         let { username, emailAddresses, password, gender } = req.body;
-
-        // Trim and convert the email to lowercase
-   
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/;
 
         if (!username) {
-            return res.status(400).json({ status: 'error', message: 'Username is required.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('USERNAME_REQUIRED', language, 'middlewares', 'authMiddleweares') });
         }
 
         username = username.trim();
 
         if (username.length > 50) {
-            return res.status(400).json({ status: 'error', message: 'Username must be 50 characters or less.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('USERNAME_TOO_LONG', language, 'middlewares', 'authMiddleweares') });
         }
         if (!emailAddresses) {
-            return res.status(400).json({ status: 'error', message: 'Email address is required.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('EMAIL_REQUIRED', language, 'middlewares', 'authMiddleweares') });
         }
 
         emailAddresses = emailAddresses.trim().toLowerCase();
 
         if (!emailRegex.test(emailAddresses)) {
-            return res.status(400).json({ status: 'error', message: 'Email address is not valid.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('EMAIL_INVALID', language, 'middlewares', 'authMiddleweares') });
         }
         if (!password) {
-            return res.status(400).json({ status: 'error', message: 'Password is required.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('PASSWORD_REQUIRED', language, 'middlewares', 'authMiddleweares') });
         }
 
         password = password.trim();
@@ -75,16 +73,15 @@ export const validateRegister = (req: Request, res: Response, next: NextFunction
         if (!passwordRegex.test(password)) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Password must be at least 6 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.'
+                message: getTranslation('PASSWORD_WEAK', language, 'middlewares', 'authMiddleweares')
             });
         }
         if (!gender || !['male', 'female', 'other'].includes(gender)) {
-            return res.status(400).json({ status: 'error', message: 'Gender must be either male, female, or other.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('GENDER_INVALID', language, 'middlewares', 'authMiddleweares') });
         }
 
         gender = gender.trim();
 
-        // Update the request body with cleaned email
         req.body.emailAddresses = emailAddresses;
         req.body.gender = gender;
         req.body.username = username;
@@ -94,23 +91,22 @@ export const validateRegister = (req: Request, res: Response, next: NextFunction
     });
 };
 
-
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
-    console.log('icxi');
-    
-    if (!token) return res.status(401).send({ message: "Token missing", success: 'danger' });
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: getTranslation('TOKEN_MISSING', language, 'middlewares', 'authMiddleweares') });
+    }
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) {
-            return res.status(403).send({ message: "Invalid token", success: 'danger' });
+            return res.status(403).json({ status: 'error', message: getTranslation('TOKEN_INVALID', language, 'middlewares', 'authMiddleweares') });
         }
 
-        // Type check to ensure user is of type JwtPayload
         if (typeof user !== 'string' && user?.id) {
-            req.user = { id: user.id, email: user.email }
+            req.user = { id: user.id, email: user.email };
         } else {
             req.user = undefined;
         }
@@ -119,27 +115,28 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     });
 };
 
-export const validateRestPassword = (req: Request, res: Response, next: NextFunction) => {
-    let { token, newPassword,confirmPassword } = req.body;
+export const validateResetPassword = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue
+    let { token, newPassword, confirmPassword } = req.body;
 
     if (!token || !newPassword || !confirmPassword) {
-        return res.status(400).json({ status: 'error', message: 'Code password and new password  and confirm password are required' });
+        return res.status(400).json({ status: 'error', message: getTranslation('RESET_PASSWORD_FIELDS_REQUIRED', language, 'middlewares', 'authMiddleweares') });
     }
 
     newPassword = newPassword.trim();
     token = token.trim();
-    confirmPassword=confirmPassword.trim();
+    confirmPassword = confirmPassword.trim();
 
     if (newPassword !== confirmPassword) {
-        return res.status(400).json({ status: 'error', message: 'New password and confirm password do not match' });
+        return res.status(400).json({ status: 'error', message: getTranslation('PASSWORDS_DO_NOT_MATCH', language, 'middlewares', 'authMiddleweares') });
     }
     if (newPassword.length < 8) {
-        return res.status(400).json({ status: 'error', message: 'New password must be at least 8 characters long' });
+        return res.status(400).json({ status: 'error', message: getTranslation('PASSWORD_TOO_SHORT', language, 'middlewares', 'authMiddleweares') });
     }
 
     req.body.token = token;
     req.body.newPassword = newPassword;
-    req.body.confirmPassword=confirmPassword;
-    
+    req.body.confirmPassword = confirmPassword;
+
     next();
 };

@@ -1,0 +1,14 @@
+{
+    "UNAUTHORIZED": "Non autorisé",
+    "USER_NOT_FOUND": "Utilisateur non trouvé",
+    "NO_USERS_FOUND": "Aucun utilisateur trouvé",
+    "USER_DELETED_SUCCESS": "Utilisateur supprimé avec succès",
+    "USER_UPDATED_SUCCESS": "Utilisateur mis à jour avec succès",
+    "IMAGE_UPLOAD_FAILED": "Échec du téléchargement de l'image",
+    "HEIC_CONVERT_ERROR": "Erreur de conversion de l'image HEIC/HEIF",
+    "NO_FIELDS_TO_UPDATE": "Aucun champ à mettre à jour",
+    "INCORRECT_OLD_PASSWORD": "Ancien mot de passe incorrect",
+    "OLD_AND_NEW_PASSWORD_REQUIRED": "L'ancien et le nouveau mot de passe sont requis",
+    "PASSWORD_UPDATED_SUCCESS": "Mot de passe mis à jour avec succès",
+    "INTERNAL_SERVER_ERROR": "Erreur interne du serveur"
+}

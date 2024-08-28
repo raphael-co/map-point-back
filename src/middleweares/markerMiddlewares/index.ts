@@ -2,75 +2,73 @@ import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import iconv from 'iconv-lite';
+import getTranslation from '../../utils/translate';
 
 dotenv.config();
 
 const upload = multer().array('images');
 
+const getLanguageFromRequest = (req: Request): string => {
+    return req.headers['accept-language']?.split(',')[0] || 'en'; // Utilise la première langue dans l'en-tête, ou 'en' par défaut
+};
+
 export const validateCreateMarker = (req: Request, res: Response, next: NextFunction) => {
+    const language = getLanguageFromRequest(req);
     console.log("validateCreateMarker - Start", req.body);
     upload(req, res, (err) => {
         if (err) {
             console.log('File upload error:', err);
-            return res.status(400).json({ status: 'error', message: 'File upload error' });
+            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'validateCreateMarker') });
+        }
+
+        if (!req.files || (req.files as Express.Multer.File[]).length < 2) {
+            return res.status(400).json({ status: 'error', message: getTranslation('MINIMUM_IMAGES_REQUIRED', language, 'middlewares', 'validateCreateMarker') });
+        }
+
+        if ((req.files as Express.Multer.File[]).length > 5) {
+            return res.status(400).json({ status: 'error', message: getTranslation('MAXIMUM_IMAGES_EXCEEDED', language, 'middlewares', 'validateCreateMarker') });
         }
 
         let { visibility, title, description, latitude, longitude, type, ratings, comment } = req.body;
 
         if (!title || !latitude || !longitude || !type || !visibility) {
-            return res.status(400).json({ status: 'error', message: 'Title, latitude, longitude, type, and visibility are required.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('REQUIRED_FIELDS_MISSING', language, 'middlewares', 'validateCreateMarker') });
         }
 
         try {
-            // Utiliser iconv pour s'assurer que les champs sont correctement décodés en UTF-8
             title = iconv.decode(Buffer.from(title.trim(), 'binary'), 'utf-8');
             description = description ? iconv.decode(Buffer.from(description.trim(), 'binary'), 'utf-8') : '';
             comment = comment ? iconv.decode(Buffer.from(comment.trim(), 'binary'), 'utf-8') : '';
             type = iconv.decode(Buffer.from(type.trim(), 'binary'), 'utf-8');
-
-            console.log("Decoded title:", title);
-            console.log("Decoded description:", description);
-            console.log("Decoded comment:", comment);
-            console.log("Decoded type:", type);
         } catch (e) {
             console.log("Error decoding URI components:", e);
-            return res.status(400).json({ status: 'error', message: 'Error decoding input fields.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('DECODING_ERROR', language, 'middlewares', 'validateCreateMarker') });
         }
 
         if (title.length > 255) {
-            console.log("Title length validation failed");
-            return res.status(400).json({ status: 'error', message: 'Title must be 255 characters or less.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'validateCreateMarker') });
         }
 
         if (isNaN(Number(latitude)) || isNaN(Number(longitude))) {
-            console.log("Latitude/Longitude validation failed");
-            return res.status(400).json({ status: 'error', message: 'Latitude and longitude must be valid numbers.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_LAT_LONG', language, 'middlewares', 'validateCreateMarker') });
         }
 
         latitude = parseFloat(latitude);
         longitude = parseFloat(longitude);
 
-        console.log("Parsed latitude:", latitude);
-        console.log("Parsed longitude:", longitude);
-
         const validTypes = ['park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other'];
         if (!validTypes.includes(type)) {
-            console.log("Type validation failed");
-            return res.status(400).json({ status: 'error', message: `Type must be one of the following: ${validTypes.join(', ')}.` });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TYPE', language, 'middlewares', 'validateCreateMarker') });
         }
 
         const validTypesVisibility = ['private', 'friends', 'public'];
         if (!validTypesVisibility.includes(visibility)) {
-            console.log("Visibility validation failed");
-            return res.status(400).json({ status: 'error', message: `Visibility must be one of the following: ${validTypesVisibility.join(', ')}.` });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY', language, 'middlewares', 'validateCreateMarker') });
         }
-
-        console.log("Ratings:", ratings);
 
         if (ratings) {
             if (typeof ratings !== 'object' || Array.isArray(ratings)) {
-                console.log("Ratings type validation failed");
-                return res.status(400).json({ status: 'error', message: 'Ratings must be an object with label-value pairs.' });
+                return res.status(400).json({ status: 'error', message: getTranslation('INVALID_RATINGS_FORMAT', language, 'middlewares', 'validateCreateMarker') });
             }
 
             const decodedRatings: { [key: string]: number } = {};
@@ -79,17 +77,14 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
                     const decodedKey = iconv.decode(Buffer.from(key, 'binary'), 'utf-8');
                     const rating = Number(ratings[key]);
                     if (isNaN(rating) || rating < 1 || rating > 5) {
-                        console.log(`Rating validation failed for ${decodedKey}`);
-                        return res.status(400).json({ status: 'error', message: `Rating for ${decodedKey} must be a number between 1 and 5.` });
+                        return res.status(400).json({ status: 'error', message: getTranslation('RATING_OUT_OF_RANGE', language, 'middlewares', 'validateCreateMarker').replace('{label}', decodedKey) });
                     }
-                    decodedRatings[decodedKey] = rating; // Update the ratings object with decoded keys
-                    console.log(`Decoded key: ${decodedKey}, Rating: ${rating}`);
+                    decodedRatings[decodedKey] = rating;
                 } catch (e) {
-                    console.log("Error decoding key:", e);
-                    return res.status(400).json({ status: 'error', message: 'Error decoding rating labels.' });
+                    return res.status(400).json({ status: 'error', message: getTranslation('DECODING_RATING_LABEL_ERROR', language, 'middlewares', 'validateCreateMarker') });
                 }
             }
-            ratings = decodedRatings; // Replace the original ratings with decoded ratings
+            ratings = decodedRatings;
         }
 
         req.body.title = title;
@@ -97,84 +92,76 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
         req.body.latitude = latitude;
         req.body.longitude = longitude;
         req.body.type = type;
-        req.body.ratings = ratings; // Les ratings sont maintenant un objet avec des labels et leurs valeurs
+        req.body.ratings = ratings;
         req.body.comment = comment;
         req.body.visibility = visibility;
 
-        console.log("Validation passed", req.body);
         next();
     });
-}
+};
 
 export const validateUpdateMarker = (req: Request, res: Response, next: NextFunction) => {
+    const language = getLanguageFromRequest(req);
     console.log("validateUpdateMarker - Start", req.body);
     upload(req, res, (err) => {
         if (err) {
             console.log('File upload error:', err);
-            return res.status(400).json({ status: 'error', message: 'File upload error' });
+            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ status: 'error', message: 'Marker ID is required.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('MARKER_ID_REQUIRED', language, 'middlewares', 'validateUpdateMarker') });
+        }
+
+        if (req.files && (req.files as Express.Multer.File[]).length > 0 && (req.files as Express.Multer.File[]).length < 2) {
+            return res.status(400).json({ status: 'error', message: getTranslation('MINIMUM_IMAGES_REQUIRED', language, 'middlewares', 'validateUpdateMarker') });
+        }
+
+        if ((req.files as Express.Multer.File[]).length > 5) {
+            return res.status(400).json({ status: 'error', message: getTranslation('MAXIMUM_IMAGES_EXCEEDED', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         let { visibility, title, description, latitude, longitude, type, ratings, comment } = req.body;
 
         if (!title && !latitude && !longitude && !type && !visibility && !comment && !ratings) {
-            return res.status(400).json({ status: 'error', message: 'At least one field must be provided for update.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('REQUIRED_FIELDS_MISSING', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         try {
-            // Decode fields if provided
             if (title) title = iconv.decode(Buffer.from(title.trim(), 'binary'), 'utf-8');
             if (description) description = iconv.decode(Buffer.from(description.trim(), 'binary'), 'utf-8');
             if (comment) comment = iconv.decode(Buffer.from(comment.trim(), 'binary'), 'utf-8');
             if (type) type = iconv.decode(Buffer.from(type.trim(), 'binary'), 'utf-8');
-
-            console.log("Decoded title:", title);
-            console.log("Decoded description:", description);
-            console.log("Decoded comment:", comment);
-            console.log("Decoded type:", type);
         } catch (e) {
             console.log("Error decoding URI components:", e);
-            return res.status(400).json({ status: 'error', message: 'Error decoding input fields.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('DECODING_ERROR', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         if (title && title.length > 255) {
-            console.log("Title length validation failed");
-            return res.status(400).json({ status: 'error', message: 'Title must be 255 characters or less.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         if ((latitude && isNaN(Number(latitude))) || (longitude && isNaN(Number(longitude)))) {
-            console.log("Latitude/Longitude validation failed");
-            return res.status(400).json({ status: 'error', message: 'Latitude and longitude must be valid numbers.' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_LAT_LONG', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         if (latitude) latitude = parseFloat(latitude);
         if (longitude) longitude = parseFloat(longitude);
 
-        console.log("Parsed latitude:", latitude);
-        console.log("Parsed longitude:", longitude);
-
         const validTypes = ['park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other'];
         if (type && !validTypes.includes(type)) {
-            console.log("Type validation failed");
-            return res.status(400).json({ status: 'error', message: `Type must be one of the following: ${validTypes.join(', ')}.` });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TYPE', language, 'middlewares', 'validateUpdateMarker') });
         }
 
         const validTypesVisibility = ['private', 'friends', 'public'];
         if (visibility && !validTypesVisibility.includes(visibility)) {
-            console.log("Visibility validation failed");
-            return res.status(400).json({ status: 'error', message: `Visibility must be one of the following: ${validTypesVisibility.join(', ')}.` });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY', language, 'middlewares', 'validateUpdateMarker') });
         }
-
-        console.log("Ratings:", ratings);
 
         if (ratings) {
             if (typeof ratings !== 'object' || Array.isArray(ratings)) {
-                console.log("Ratings type validation failed");
-                return res.status(400).json({ status: 'error', message: 'Ratings must be an object with label-value pairs.' });
+                return res.status(400).json({ status: 'error', message: getTranslation('INVALID_RATINGS_FORMAT', language, 'middlewares', 'validateUpdateMarker') });
             }
 
             const decodedRatings: { [key: string]: number } = {};
@@ -183,17 +170,14 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
                     const decodedKey = iconv.decode(Buffer.from(key, 'binary'), 'utf-8');
                     const rating = Number(ratings[key]);
                     if (isNaN(rating) || rating < 1 || rating > 5) {
-                        console.log(`Rating validation failed for ${decodedKey}`);
-                        return res.status(400).json({ status: 'error', message: `Rating for ${decodedKey} must be a number between 1 and 5.` });
+                        return res.status(400).json({ status: 'error', message: getTranslation('RATING_OUT_OF_RANGE', language, 'middlewares', 'validateUpdateMarker').replace('{label}', decodedKey) });
                     }
-                    decodedRatings[decodedKey] = rating; // Update the ratings object with decoded keys
-                    console.log(`Decoded key: ${decodedKey}, Rating: ${rating}`);
+                    decodedRatings[decodedKey] = rating;
                 } catch (e) {
-                    console.log("Error decoding key:", e);
-                    return res.status(400).json({ status: 'error', message: 'Error decoding rating labels.' });
+                    return res.status(400).json({ status: 'error', message: getTranslation('DECODING_RATING_LABEL_ERROR', language, 'middlewares', 'validateUpdateMarker') });
                 }
             }
-            ratings = decodedRatings; // Replace the original ratings with decoded ratings
+            ratings = decodedRatings;
         }
 
         req.body.title = title;
@@ -201,11 +185,10 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
         req.body.latitude = latitude;
         req.body.longitude = longitude;
         req.body.type = type;
-        req.body.ratings = ratings; // Les ratings sont maintenant un objet avec des labels et leurs valeurs
+        req.body.ratings = ratings;
         req.body.comment = comment;
         req.body.visibility = visibility;
 
-        console.log("Validation passed", req.body);
         next();
     });
 };
