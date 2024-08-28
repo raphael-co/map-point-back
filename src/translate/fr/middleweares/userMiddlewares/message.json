@@ -2,6 +2,7 @@
     "FILE_UPLOAD_ERROR": "Erreur de téléchargement de fichier",
     "USERNAME_REQUIRED": "Le nom d'utilisateur est requis.",
     "USERNAME_TOO_LONG": "Le nom d'utilisateur doit contenir au maximum 50 caractères.",
+    "USERNAME_TOO_SHORT": "Le nom d'utilisateur doit contenir au moins 4 caractères.",
     "INVALID_GENDER": "Le genre doit être soit homme, femme ou autre.",
     "PASSWORD_FIELDS_REQUIRED": "L'ancien mot de passe, le nouveau mot de passe et la confirmation du mot de passe sont requis",
     "PASSWORD_MISMATCH": "Le nouveau mot de passe et la confirmation du mot de passe ne correspondent pas",

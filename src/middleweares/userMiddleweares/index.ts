@@ -42,6 +42,13 @@ export const validateEditeUser = (req: Request, res: Response, next: NextFunctio
             });
         }
 
+        if (username.length < 4) {
+            return res.status(400).json({ 
+                status: 'error', 
+                message: getTranslation('USERNAME_TOO_SHORT', language, 'middlewares', 'userMiddlewares') 
+            });
+        }
+
         gender = gender.trim();
 
         if (!gender || !['male', 'female', 'other'].includes(gender)) {
