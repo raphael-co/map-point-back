@@ -8,7 +8,7 @@ interface Translations {
 
 // Fonction pour charger le fichier JSON de la langue
 const loadLanguageFile = (languageCode: string, folder: string, moduleName: string): Translations => {
-    const filePath = path.join(__dirname, 'translate', languageCode, folder, moduleName, 'message.json');
+    const filePath = path.join(__dirname, '..', 'translate', languageCode, folder, moduleName, 'message.json');
     try {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         return JSON.parse(fileContent);
