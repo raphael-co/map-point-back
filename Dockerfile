@@ -16,6 +16,9 @@ COPY . .
 # Build the TypeScript code
 RUN npm run build
 
+# Copy translation files to the dist directory
+RUN mkdir -p dist/translate && cp -r src/translate/* dist/translate/
+
 # Expose the port the app runs on
 EXPOSE 3000
 
