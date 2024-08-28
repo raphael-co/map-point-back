@@ -1,0 +1,17 @@
+{
+    "USER_ALREADY_EXISTS": "L'utilisateur existe déjà",
+    "IMAGE_UPLOAD_FAILED": "Le téléchargement de l'image a échoué",
+    "INVALID_CREDENTIALS": "Identifiants invalides",
+    "USER_REGISTERED_SUCCESSFULLY": "Utilisateur enregistré avec succès",
+    "INTERNAL_SERVER_ERROR": "Erreur interne du serveur",
+    "INVALID_TOKEN_FORMAT": "Format de jeton invalide",
+    "INVALID_TOKEN": "Jeton invalide",
+    "USER_NOT_FOUND": "L'utilisateur n'existe pas",
+    "PASSWORD_RESET_TOKEN_SENT": "Le jeton de réinitialisation du mot de passe a été envoyé",
+    "PASSWORD_RESET_SUCCESS": "Mot de passe réinitialisé avec succès",
+    "TOKEN_AND_PASSWORD_REQUIRED": "Le jeton et le nouveau mot de passe sont requis",
+    "INVALID_OR_EXPIRED_TOKEN": "Jeton invalide ou expiré",
+    "NO_USERS_PROVIDED": "Aucun utilisateur fourni pour l'enregistrement",
+    "USERS_REGISTERED_SUCCESSFULLY": "{count} utilisateurs enregistrés avec succès",
+    "PASSWORD_IS_REQUIRED": "L'email est requis"
+}

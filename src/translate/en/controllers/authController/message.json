@@ -1,0 +1,17 @@
+{
+    "USER_ALREADY_EXISTS": "User already exists",
+    "IMAGE_UPLOAD_FAILED": "Image upload failed",
+    "INVALID_CREDENTIALS": "Invalid credentials",
+    "USER_REGISTERED_SUCCESSFULLY": "User registered successfully",
+    "INTERNAL_SERVER_ERROR": "Internal server error",
+    "INVALID_TOKEN_FORMAT": "Invalid token format",
+    "INVALID_TOKEN": "Invalid token",
+    "USER_NOT_FOUND": "User does not exist",
+    "PASSWORD_RESET_TOKEN_SENT": "Password reset token sent",
+    "PASSWORD_RESET_SUCCESS": "Password reset successfully",
+    "TOKEN_AND_PASSWORD_REQUIRED": "Token and new password are required",
+    "INVALID_OR_EXPIRED_TOKEN": "Invalid or expired token",
+    "NO_USERS_PROVIDED": "No users provided for registration",
+    "USERS_REGISTERED_SUCCESSFULLY": "{count} users registered successfully",
+    "PASSWORD_IS_REQUIRED": "Email is required"
+}

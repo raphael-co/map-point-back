@@ -9,6 +9,7 @@ import cloudinary from 'cloudinary';
 import multer from 'multer';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import getTranslation from '../utils/translate';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ const upload = multer({ storage }).single('profileImage');
 export const registerController = async (req: Request, res: Response) => {
     const { username, emailAddresses, password, gender } = req.body;
     const profileImage = req.file;
+    const language = req.headers['accept-language'] || 'en';  // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -45,7 +47,7 @@ export const registerController = async (req: Request, res: Response) => {
 
         if (rows.length > 0) {
             connection.release();
-            return res.status(400).json({ status: 'error', message: 'User already exists' });
+            return res.status(400).json({ status: 'error', message: getTranslation('USER_ALREADY_EXISTS', language,'controllers','authController') });
         }
 
         let profileImageUrl: string | null = null;
@@ -55,7 +57,7 @@ export const registerController = async (req: Request, res: Response) => {
                 const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
                     cloudinary.v2.uploader.upload_stream({
                         folder: 'mapPoint/profile_pictures',
-                        transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                        transformation: { width: 1000, height: 1000, crop: "limit" },
                         resource_type: "image"
                     }, (error, result) => {
                         if (error) reject(error);
@@ -67,15 +69,12 @@ export const registerController = async (req: Request, res: Response) => {
             } catch (error) {
                 console.error('Cloudinary error:', error);
                 connection.release();
-                return res.status(500).json({ status: 'error', message: 'Image upload failed' });
+                return res.status(500).json({ status: 'error', message: getTranslation('IMAGE_UPLOAD_FAILED', language,'controllers','authController') });
             }
         } else {
-            // Set default profile image URL based on gender
-            if (gender === 'female') {
-                profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/upb08ercpavzhyi1vzhs.png';
-            } else {
-                profileImageUrl = 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/htpon9qyg2oktamknqzz.png';
-            }
+            profileImageUrl = gender === 'female' 
+                ? 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/upb08ercpavzhyi1vzhs.png' 
+                : 'https://res.cloudinary.com/juste-pour-toi-mon-ami/image/upload/v1722020489/mapPoint/profile_pictures/htpon9qyg2oktamknqzz.png';
         }
 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
@@ -90,15 +89,16 @@ export const registerController = async (req: Request, res: Response) => {
         const userId = result.insertId;
         const jwtToken = jwt.sign({ id: userId, email: emailAddresses }, SECRET_KEY);
 
-        res.status(201).json({ status: 'success', message: 'User registered successfully', token: jwtToken });
+        res.status(201).json({ status: 'success', message: getTranslation('USER_REGISTERED_SUCCESSFULLY', language,'controllers','authController'), token: jwtToken });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
     }
 };
 
 export const loginController = async (req: Request, res: Response) => {
     const { emailAddresses, password } = req.body;
+    const language = req.headers['accept-language'] || 'en';
 
     try {
         const connection = await pool.getConnection();
@@ -106,34 +106,34 @@ export const loginController = async (req: Request, res: Response) => {
         connection.release();
 
         if (rows.length === 0) {
-            return res.status(400).json({ status: 'error', message: 'Invalid credentials' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language,'controllers','authController') });
         }
 
         const user = rows[0];
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ status: 'error', message: 'Invalid credentials' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language,'controllers','authController') });
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY);
         res.status(200).json({ status: 'success', token });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
     }
 };
 
 export const googleAuthController = async (req: Request, res: Response) => {
     const { token } = req.body;
+    const language = req.headers['accept-language'] || 'en';
 
     try {
         console.debug('Verifying Google ID token:', token);
 
-        // Validate the structure of the ID token
         const tokenSegments = token.split('.');
         if (tokenSegments.length !== 3) {
             console.error('Invalid token format');
-            return res.status(400).json({ status: 'error', message: 'Invalid token format' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TOKEN_FORMAT', language,'controllers','authController') });
         }
 
         const ticket = await client.verifyIdToken({
@@ -144,7 +144,7 @@ export const googleAuthController = async (req: Request, res: Response) => {
 
         if (!payload) {
             console.debug('Invalid token payload');
-            return res.status(400).json({ status: 'error', message: 'Invalid token' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TOKEN', language,'controllers','authController') });
         }
 
         const { sub: googleId, email, name, picture } = payload;
@@ -174,15 +174,16 @@ export const googleAuthController = async (req: Request, res: Response) => {
         res.status(200).json({ status: 'success', token: jwtToken, user: { id: user.id, email: user.email, username: user.username, profilePicture: user.profile_image_url } });
     } catch (error) {
         console.error('Internal server error:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
     }
 };
 
 export const bulkRegisterController = async (req: Request, res: Response) => {
     const users = req.body.users;
+    const language = req.headers['accept-language'] || 'en';
 
     if (!Array.isArray(users) || users.length === 0) {
-        return res.status(400).json({ status: 'error', message: 'No users provided for registration' });
+        return res.status(400).json({ status: 'error', message: getTranslation('NO_USERS_PROVIDED', language,'controllers','authController') });
     }
 
     try {
@@ -197,13 +198,12 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
 
             let profileImageUrl = null;
 
-            // Upload de l'image de profil sur Cloudinary si fournie
             if (profileImage) {
                 try {
                     const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
                         cloudinary.v2.uploader.upload_stream({
                             folder: 'mapPoint/profile_pictures',
-                            transformation: { width: 1000, height: 1000, crop: "limit" }, // Limite la taille de l'image
+                            transformation: { width: 1000, height: 1000, crop: "limit" },
                             resource_type: "image"
                         }, (error, result) => {
                             if (error) reject(error);
@@ -215,7 +215,7 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
                 } catch (error) {
                     console.error('Cloudinary error:', error);
                     connection.release();
-                    return res.status(500).json({ status: 'error', message: 'Image upload failed' });
+                    return res.status(500).json({ status: 'error', message: getTranslation('IMAGE_UPLOAD_FAILED', language,'controllers','authController') });
                 }
             } else {
                 console.log('No profile image provided.');
@@ -234,10 +234,10 @@ export const bulkRegisterController = async (req: Request, res: Response) => {
 
         connection.release();
 
-        res.status(201).json({ status: 'success', message: `${insertValues.length} users registered successfully` });
+        res.status(201).json({ status: 'success', message: getTranslation('USERS_REGISTERED_SUCCESSFULLY', language,'controllers','authController').replace('{count}', `${insertValues.length}`) });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
     }
 };
 
@@ -253,9 +253,10 @@ const transporter = nodemailer.createTransport({
 
 export const requestPasswordReset = async (req: Request, res: Response) => {
     const { email } = req.body;
+    const language = req.headers['accept-language'] || 'en';
 
     if (!email) {
-        return res.status(400).json({ status: 'error', message: 'Email is required' });
+        return res.status(400).json({ status: 'error', message: getTranslation('PASSWORD_IS_REQUIRED', language,'controllers','authController') });
     }
 
     try {
@@ -264,7 +265,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
         if (userRows.length === 0) {
             connection.release();
-            return res.status(400).json({ status: 'error', message: 'User does not exist' });
+            return res.status(400).json({ status: 'error', message: getTranslation('USER_NOT_FOUND', language,'controllers','authController') });
         }
 
         const user = userRows[0];
@@ -281,24 +282,24 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
             from: '"Password Reset" <your-email@gmail.com>',
             to: email,
             subject: 'Password Reset Request',
-            text: `Your password reset token is ${resetToken}. It will expire in 1 hour.`
+            text: getTranslation('PASSWORD_RESET_TOKEN_SENT', language,'controllers','authController').replace('{token}', resetToken)
         };
 
         await transporter.sendMail(mailOptions);
-        res.status(200).json({ status: 'success', message: 'Password reset token sent' });
+        res.status(200).json({ status: 'success', message: getTranslation('PASSWORD_RESET_TOKEN_SENT', language,'controllers','authController') });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
     }
 };
 
-
 export const resetPassword = async (req: Request, res: Response) => {
     const { token, newPassword } = req.body;
+    const language = req.headers['accept-language'] || 'en';
 
     if (!token || !newPassword) {
-        return res.status(400).json({ status: 'error', message: 'Token and new password are required' });
+        return res.status(400).json({ status: 'error', message: getTranslation('TOKEN_AND_PASSWORD_REQUIRED', language,'controllers','authController') });
     }
 
     try {
@@ -310,7 +311,8 @@ export const resetPassword = async (req: Request, res: Response) => {
 
         if (tokenRows.length === 0) {
             connection.release();
-            return res.status(400).json({ status: 'error', message: 'Invalid or expired token' });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_OR_EXPIRED_TOKEN', language,'controllers','authController')});
+
         }
 
         const resetToken = tokenRows[0];
@@ -320,10 +322,10 @@ export const resetPassword = async (req: Request, res: Response) => {
         await connection.query('DELETE FROM PasswordResetTokens WHERE token = ?', [token]);
 
         connection.release();
-        res.status(200).json({ status: 'success', message: 'Password reset successfully' });
+        res.status(200).json({ status: 'success', message: getTranslation('PASSWORD_RESET_SUCCESS', language,'controllers','authController') });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
     }
 };
