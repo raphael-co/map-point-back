@@ -1,0 +1,12 @@
+{
+    "FRIEND_REQUEST_ALREADY_SENT": "Demande d'ami déjà envoyée",
+    "ALREADY_FOLLOWING": "Vous suivez déjà cet utilisateur",
+    "USER_NOT_FOUND": "Utilisateur non trouvé",
+    "FRIEND_REQUEST_SENT_SUCCESS": "Demande d'ami envoyée avec succès",
+    "INTERNAL_SERVER_ERROR": "Erreur interne du serveur",
+    "UNAUTHORIZED": "Non autorisé",
+    "NO_PENDING_FRIEND_REQUEST": "Aucune demande d'ami en attente de cet utilisateur",
+    "FRIEND_REQUEST_ACCEPTED": "{username} peut maintenant voir vos points",
+    "FRIEND_REQUEST_REJECTED": "Demande d'ami rejetée",
+    "UNFOLLOWED_SUCCESS": "Désabonné avec succès"
+}

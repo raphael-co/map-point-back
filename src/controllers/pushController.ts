@@ -2,22 +2,17 @@ import { Request, Response } from 'express';
 import pool from '../utils/config/dbConnection';
 import axios from 'axios';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-
-
-
+import getTranslation from '../utils/translate'; // Importer la fonction de traduction
 
 // Fonction pour ajouter uniquement un token de notification push
 export const addPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
-    console.log(token);
-    
     if (!token) {
-        return res.status(400).json({ success: false, error: 'Token is required' });
+        return res.status(400).json({ success: false, error: getTranslation('TOKEN_REQUIRED', language, 'controllers', 'pushController') });
     }
 
-    console.log('ici');
-    
     try {
         // Vérifier si le token existe déjà dans PushTokens
         let [rows]: [RowDataPacket[], any] = await pool.query(
@@ -29,15 +24,13 @@ export const addPushToken = async (req: Request, res: Response) => {
             const [result]: [ResultSetHeader, any] = await pool.query(
                 'INSERT INTO PushTokens (token) VALUES (?)', [token]
             );
-            console.log(result);
-            
             return res.status(200).json({ success: true, tokenId: result.insertId });
         } else {
-            return res.status(200).json({ success: false, message: 'Token already exists', tokenId: rows[0].id });
+            return res.status(200).json({ success: false, message: getTranslation('TOKEN_ALREADY_EXISTS', language, 'controllers', 'pushController'), tokenId: rows[0].id });
         }
     } catch (error) {
         console.error(error);
-        res.status(500).send({ success: false, error: 'Database error' });
+        res.status(500).send({ success: false, error: getTranslation('DATABASE_ERROR', language, 'controllers', 'pushController') });
     }
 };
 
@@ -45,9 +38,10 @@ export const addPushToken = async (req: Request, res: Response) => {
 export const saveToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User ID is required' });
+        return res.status(400).json({ success: false, error: getTranslation('USER_ID_REQUIRED', language, 'controllers', 'pushController') });
     }
 
     try {
@@ -81,7 +75,7 @@ export const saveToken = async (req: Request, res: Response) => {
         res.status(200).send({ success: true });
     } catch (error) {
         console.error(error);
-        res.status(500).send({ success: false, error: 'Database error' });
+        res.status(500).send({ success: false, error: getTranslation('DATABASE_ERROR', language, 'controllers', 'pushController') });
     }
 };
 
@@ -89,9 +83,10 @@ export const saveToken = async (req: Request, res: Response) => {
 export const sendNotification = async (req: Request, res: Response) => {
     const { title, body } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User ID is required' });
+        return res.status(400).json({ success: false, error: getTranslation('USER_ID_REQUIRED', language, 'controllers', 'pushController') });
     }
 
     try {
@@ -127,16 +122,17 @@ export const sendNotification = async (req: Request, res: Response) => {
         res.status(200).json({ success: true, results });
     } catch (error: any) {
         console.error(error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: getTranslation('NOTIFICATION_SEND_ERROR', language, 'controllers', 'pushController') });
     }
 };
 
 // Function to send notifications to multiple users
 export const sendNotificationToUsers = async (req: Request, res: Response) => {
     const { title, body, targetUserIds } = req.body;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
-        return res.status(400).json({ success: false, error: 'Invalid target user IDs' });
+        return res.status(400).json({ success: false, error: getTranslation('INVALID_TARGET_USER_IDS', language, 'controllers', 'pushController') });
     }
 
     try {
@@ -174,7 +170,7 @@ export const sendNotificationToUsers = async (req: Request, res: Response) => {
         res.status(200).json({ success: true, results });
     } catch (error: any) {
         console.error(error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: getTranslation('NOTIFICATION_SEND_ERROR', language, 'controllers', 'pushController') });
     }
 };
 
@@ -182,8 +178,10 @@ export const sendNotificationToUsers = async (req: Request, res: Response) => {
 export const linkUserWithPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+
     if (!userId || !token) {
-        return res.status(400).json({ success: false, error: 'User ID and token are required' });
+        return res.status(400).json({ success: false, error: getTranslation('USER_ID_AND_TOKEN_REQUIRED', language, 'controllers', 'pushController') });
     }
 
     try {
@@ -215,19 +213,20 @@ export const linkUserWithPushToken = async (req: Request, res: Response) => {
             );
         }
 
-        res.status(200).json({ success: true, message: 'User linked with push token successfully' });
+        res.status(200).json({ success: true, message: getTranslation('USER_LINKED_WITH_TOKEN_SUCCESS', language, 'controllers', 'pushController') });
     } catch (error: any) {
         console.error(error);
-        res.status(500).json({ success: false, error: 'Database error' });
+        res.status(500).json({ success: false, error: getTranslation('DATABASE_ERROR', language, 'controllers', 'pushController') });
     }
 };
 
 export const unlinkUserWithPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId || !token) {
-        return res.status(400).json({ success: false, error: 'User ID and token are required' });
+        return res.status(400).json({ success: false, error: getTranslation('USER_ID_AND_TOKEN_REQUIRED', language, 'controllers', 'pushController') });
     }
 
     try {
@@ -237,7 +236,7 @@ export const unlinkUserWithPushToken = async (req: Request, res: Response) => {
         );
 
         if (tokenRows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Token not found' });
+            return res.status(404).json({ success: false, error: getTranslation('TOKEN_NOT_FOUND', language, 'controllers', 'pushController') });
         }
 
         const tokenId = tokenRows[0].id;
@@ -248,12 +247,12 @@ export const unlinkUserWithPushToken = async (req: Request, res: Response) => {
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Association not found' });
+            return res.status(404).json({ success: false, error: getTranslation('ASSOCIATION_NOT_FOUND', language, 'controllers', 'pushController') });
         }
 
-        res.status(200).json({ success: true, message: 'User unlinked from push token successfully' });
+        res.status(200).json({ success: true, message: getTranslation('USER_UNLINKED_FROM_TOKEN_SUCCESS', language, 'controllers', 'pushController') });
     } catch (error: any) {
         console.error(error);
-        res.status(500).json({ success: false, error: 'Database error' });
+        res.status(500).json({ success: false, error: getTranslation('DATABASE_ERROR', language, 'controllers', 'pushController') });
     }
 };

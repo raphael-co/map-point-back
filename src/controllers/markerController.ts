@@ -3,7 +3,8 @@ import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
-import { notifyFollowers } from './notificationsCoontroller';
+import { notifyFollowers } from './notificationsController';
+import getTranslation from '../utils/translate';  // Importer la fonction de traduction
 
 dotenv.config();
 
@@ -18,13 +19,14 @@ export const createMarker = async (req: Request, res: Response) => {
     console.log("createMarker - Start", req.body);
     const { title, description, latitude, longitude, type, ratings, comment, visibility } = req.body;
     const files = req.files as Express.Multer.File[] | undefined;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!title || !latitude || !longitude || !type || !visibility) {
-        return res.status(400).json({ status: 'error', message: 'Title, latitude, longitude, type, and visibility are required.' });
+        return res.status(400).json({ status: 'error', message: getTranslation('REQUIRED_FIELDS_MISSING', language, 'controllers', 'markerController') });
     }
 
     if (!files || files.length < 2) {
-        return res.status(400).json({ status: 'error', message: 'At least two images are required.' });
+        return res.status(400).json({ status: 'error', message: getTranslation('TWO_IMAGES_REQUIRED', language, 'controllers', 'markerController') });
     }
 
     const userId = req.user!.id;
@@ -86,24 +88,25 @@ export const createMarker = async (req: Request, res: Response) => {
         );
 
         // Répondre au client immédiatement avant de gérer les notifications
-        res.status(201).json({ status: 'success', message: 'Marker created successfully', markerId });
+        res.status(201).json({ status: 'success', message: getTranslation('MARKER_CREATED_SUCCESS', language, 'controllers', 'markerController'), markerId });
 
         // Commencer le traitement des images
         await Promise.all(imageUploadPromises);
 
         // Notifier les followers
-        notifyFollowers(userId, 'new_marker', `User ${userId} added a new marker titled "${title}".`,'accepted');
+        notifyFollowers(userId, 'new_marker', getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{title}', title), 'accepted');
 
         connection.release();
         // io.emit('markersUpdated');
     } catch (error) {
         console.error('Error creating marker:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
 
-
 export const getAllMarkers = async (req: Request, res: Response) => {
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+
     try {
         const connection = await pool.getConnection();
         try {
@@ -111,7 +114,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
             const visibility = req.query.visibility as string;
 
             if (!userId) {
-                return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+                return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
             }
 
             let query = `
@@ -161,7 +164,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                     break;
 
                 default:
-                    return res.status(400).json({ status: 'error', message: 'Invalid visibility parameter' });
+                    return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY_PARAMETER', language, 'controllers', 'markerController') });
             }
 
             query += ` GROUP BY m.id`;
@@ -170,7 +173,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
 
             if (markers.length === 0) {
                 connection.release();
-                return res.status(404).json({ status: 'error', message: 'No markers found' });
+                return res.status(404).json({ status: 'error', message: getTranslation('NO_MARKERS_FOUND', language, 'controllers', 'markerController') });
             }
 
             // Fetch ratings and labels for each marker
@@ -197,23 +200,22 @@ export const getAllMarkers = async (req: Request, res: Response) => {
         } catch (error) {
             connection.release();
             console.error('Error fetching markers:', error);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
         }
     } catch (error) {
         console.error('Database connection error:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
 
-
-
 export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
     try {
         const userId = req.user?.id ?? null;
 
         if (!userId) {
-            return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+            return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
         }
 
         const [markers] = await connection.query<RowDataPacket[]>(
@@ -248,18 +250,19 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
     } catch (err) {
         connection.release();
         console.error('Error fetching markers:', err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
 
 export const getMarkersByUser = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
     try {
         const currentUserId = req.user?.id ?? null;
         const targetUserId = parseInt(req.params.userId, 10);
 
         if (!currentUserId) {
-            return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+            return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
         }
 
         // Check if the current user is an accepted follower of the target user
@@ -303,7 +306,7 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
     } catch (err) {
         connection.release();
         console.error('Error fetching markers:', err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
 
@@ -313,9 +316,10 @@ export const updateMarker = async (req: Request, res: Response) => {
     const { title, description, latitude, longitude, type, ratings, comment, visibility } = req.body;
     const files = req.files as Express.Multer.File[] | undefined;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!id || !userId) {
-        return res.status(400).json({ status: 'error', message: 'Marker ID and user ID are required.' });
+        return res.status(400).json({ status: 'error', message: getTranslation('MARKER_ID_USER_ID_REQUIRED', language, 'controllers', 'markerController') });
     }
 
     try {
@@ -329,7 +333,7 @@ export const updateMarker = async (req: Request, res: Response) => {
 
         if (existingMarker.length === 0) {
             connection.release();
-            return res.status(404).json({ status: 'error', message: 'Marker not found or unauthorized access.' });
+            return res.status(404).json({ status: 'error', message: getTranslation('MARKER_NOT_FOUND_UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
         }
 
         // Update the marker's details
@@ -424,21 +428,79 @@ export const updateMarker = async (req: Request, res: Response) => {
 
         connection.release();
         // io.emit('markersUpdated');
-        res.status(200).json({ status: 'success', message: 'Marker updated successfully' });
+        res.status(200).json({ status: 'success', message: getTranslation('MARKER_UPDATED_SUCCESS', language, 'controllers', 'markerController') });
     } catch (error) {
         console.error('Error updating marker:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
 
+export const deleteMarker = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+
+    if (!id || !userId) {
+        return res.status(400).json({ status: 'error', message: getTranslation('MARKER_ID_USER_ID_REQUIRED', language, 'controllers', 'markerController') });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Check if the marker exists and belongs to the user
+        const [existingMarker] = await connection.query<RowDataPacket[]>(
+            `SELECT * FROM Markers WHERE id = ? AND user_id = ?`,
+            [id, userId]
+        );
+
+        if (existingMarker.length === 0) {
+            connection.release();
+            return res.status(404).json({ status: 'error', message: getTranslation('MARKER_NOT_FOUND_UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
+        }
+
+        // Fetch images associated with the marker
+        const [images] = await connection.query<RowDataPacket[]>(
+            `SELECT id, image_url FROM MarkerImages WHERE marker_id = ?`,
+            [id]
+        );
+
+        // Delete images from Cloudinary
+        for (const image of images) {
+            const publicId = image.image_url.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.v2.uploader.destroy(`mapPoint/markers/${publicId}`);
+            }
+        }
+
+        // Delete image records from the database
+        await connection.query('DELETE FROM MarkerImages WHERE marker_id = ?', [id]);
+
+        // Delete ratings associated with the marker
+        await connection.query('DELETE FROM MarkerRatings WHERE marker_id = ?', [id]);
+
+        // Delete comments associated with the marker
+        await connection.query('DELETE FROM MarkerComments WHERE marker_id = ?', [id]);
+
+        // Finally, delete the marker itself
+        await connection.query('DELETE FROM Markers WHERE id = ? AND user_id = ?', [id, userId]);
+
+        connection.release();
+        // io.emit('markersUpdated');
+        res.status(200).json({ status: 'success', message: getTranslation('MARKER_DELETED_SUCCESS', language, 'controllers', 'markerController') });
+    } catch (error) {
+        console.error('Error deleting marker:', error);
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
+    }
+};
 
 export const getAllMarkersUserProfile = async (req: Request, res: Response) => {
     const { userProfileId } = req.params; // ID du profil utilisateur ciblé
     const userId = req.user?.id; // ID de l'utilisateur connecté
     const connection = await pool.getConnection();
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(403).json({ status: 'error', message: 'Unauthorized access' });
+        return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
     }
 
     try {
@@ -486,13 +548,13 @@ export const getAllMarkersUserProfile = async (req: Request, res: Response) => {
     } catch (err) {
         connection.release();
         console.error('Error fetching markers:', err);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
 
-
 export const getMarkersById = async (req: Request, res: Response) => {
     const { id } = req.params;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -515,7 +577,7 @@ export const getMarkersById = async (req: Request, res: Response) => {
 
             if (marker.length === 0) {
                 connection.release();
-                return res.status(404).json({ status: 'error', message: 'Marker not found' });
+                return res.status(404).json({ status: 'error', message: getTranslation('MARKER_NOT_FOUND', language, 'controllers', 'markerController') });
             }
 
             // Fetch ratings and labels for the marker
@@ -538,67 +600,10 @@ export const getMarkersById = async (req: Request, res: Response) => {
         } catch (error) {
             connection.release();
             console.error('Error fetching marker:', error);
-            res.status(500).json({ status: 'error', message: 'Internal server error' });
+            res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
         }
     } catch (error) {
         console.error('Database connection error:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 }
-
-export const deleteMarker = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const userId = req.user?.id;
-
-    if (!id || !userId) {
-        return res.status(400).json({ status: 'error', message: 'Marker ID and user ID are required.' });
-    }
-
-    try {
-        const connection = await pool.getConnection();
-
-        // Check if the marker exists and belongs to the user
-        const [existingMarker] = await connection.query<RowDataPacket[]>(
-            `SELECT * FROM Markers WHERE id = ? AND user_id = ?`,
-            [id, userId]
-        );
-
-        if (existingMarker.length === 0) {
-            connection.release();
-            return res.status(404).json({ status: 'error', message: 'Marker not found or unauthorized access.' });
-        }
-
-        // Fetch images associated with the marker
-        const [images] = await connection.query<RowDataPacket[]>(
-            `SELECT id, image_url FROM MarkerImages WHERE marker_id = ?`,
-            [id]
-        );
-
-        // Delete images from Cloudinary
-        for (const image of images) {
-            const publicId = image.image_url.split('/').pop()?.split('.')[0];
-            if (publicId) {
-                await cloudinary.v2.uploader.destroy(`mapPoint/markers/${publicId}`);
-            }
-        }
-
-        // Delete image records from the database
-        await connection.query('DELETE FROM MarkerImages WHERE marker_id = ?', [id]);
-
-        // Delete ratings associated with the marker
-        await connection.query('DELETE FROM MarkerRatings WHERE marker_id = ?', [id]);
-
-        // Delete comments associated with the marker
-        await connection.query('DELETE FROM MarkerComments WHERE marker_id = ?', [id]);
-
-        // Finally, delete the marker itself
-        await connection.query('DELETE FROM Markers WHERE id = ? AND user_id = ?', [id, userId]);
-
-        connection.release();
-        // io.emit('markersUpdated');
-        res.status(200).json({ status: 'success', message: 'Marker deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting marker:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
-    }
-};

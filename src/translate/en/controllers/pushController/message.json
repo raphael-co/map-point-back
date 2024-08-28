@@ -1,0 +1,13 @@
+{
+    "TOKEN_REQUIRED": "Token is required",
+    "TOKEN_ALREADY_EXISTS": "Token already exists",
+    "DATABASE_ERROR": "Database error",
+    "USER_ID_REQUIRED": "User ID is required",
+    "NOTIFICATION_SEND_ERROR": "Error sending notification",
+    "INVALID_TARGET_USER_IDS": "Invalid target user IDs",
+    "USER_ID_AND_TOKEN_REQUIRED": "User ID and token are required",
+    "USER_LINKED_WITH_TOKEN_SUCCESS": "User linked with push token successfully",
+    "TOKEN_NOT_FOUND": "Token not found",
+    "ASSOCIATION_NOT_FOUND": "Association not found",
+    "USER_UNLINKED_FROM_TOKEN_SUCCESS": "User unlinked from push token successfully"
+}

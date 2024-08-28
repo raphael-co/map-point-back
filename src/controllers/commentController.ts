@@ -1,14 +1,16 @@
 import { Request, Response } from 'express';
 import pool from '../utils/config/dbConnection';
 import { RowDataPacket } from 'mysql2';
+import getTranslation from '../utils/translate';  // Importer la fonction de traduction
 
 // Ajouter un commentaire
 export const addComment = async (req: Request, res: Response) => {
     const { marker_id, comment, rating } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (rating < 1 || rating > 5) {
-        return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+        return res.status(400).json({ message: getTranslation('RATING_BETWEEN_1_AND_5', language, 'controllers', 'commentController') });
     }
 
     try {
@@ -21,7 +23,7 @@ export const addComment = async (req: Request, res: Response) => {
 
         if (existingComments.length > 0) {
             connection.release();
-            return res.status(400).json({ message: 'You have already commented on this marker.' });
+            return res.status(400).json({ message: getTranslation('ALREADY_COMMENTED', language, 'controllers', 'commentController') });
         }
 
         await connection.query(
@@ -30,16 +32,17 @@ export const addComment = async (req: Request, res: Response) => {
         );
         connection.release();
 
-        res.status(201).json({ message: 'Comment added successfully' });
+        res.status(201).json({ message: getTranslation('COMMENT_ADDED_SUCCESS', language, 'controllers', 'commentController') });
     } catch (error) {
         console.error('Error adding comment:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'commentController') });
     }
 };
 
 // Récupérer les commentaires d'un marqueur
 export const getComments = async (req: Request, res: Response) => {
     const { marker_id } = req.params;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -52,7 +55,7 @@ export const getComments = async (req: Request, res: Response) => {
         res.status(200).json(comments);
     } catch (error) {
         console.error('Error fetching comments:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'commentController') });
     }
 };
 
@@ -60,9 +63,10 @@ export const getComments = async (req: Request, res: Response) => {
 export const updateComment = async (req: Request, res: Response) => {
     const { comment_id, comment, rating } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (rating < 1 || rating > 5) {
-        return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+        return res.status(400).json({ message: getTranslation('RATING_BETWEEN_1_AND_5', language, 'controllers', 'commentController') });
     }
 
     try {
@@ -76,12 +80,12 @@ export const updateComment = async (req: Request, res: Response) => {
 
         if (rows.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: getTranslation('COMMENT_NOT_FOUND', language, 'controllers', 'commentController') });
         }
 
         if (rows[0].user_id !== userId) {
             connection.release();
-            return res.status(403).json({ message: 'Unauthorized' });
+            return res.status(403).json({ message: getTranslation('UNAUTHORIZED', language, 'controllers', 'commentController') });
         }
 
         await connection.query(
@@ -90,10 +94,10 @@ export const updateComment = async (req: Request, res: Response) => {
         );
         connection.release();
 
-        res.status(200).json({ message: 'Comment updated successfully' });
+        res.status(200).json({ message: getTranslation('COMMENT_UPDATED_SUCCESS', language, 'controllers', 'commentController') });
     } catch (error) {
         console.error('Error updating comment:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'commentController') });
     }
 };
 
@@ -101,6 +105,7 @@ export const updateComment = async (req: Request, res: Response) => {
 export const deleteComment = async (req: Request, res: Response) => {
     const { comment_id } = req.params;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -113,12 +118,12 @@ export const deleteComment = async (req: Request, res: Response) => {
 
         if (rows.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: getTranslation('COMMENT_NOT_FOUND', language, 'controllers', 'commentController') });
         }
 
         if (rows[0].user_id !== userId) {
             connection.release();
-            return res.status(403).json({ message: 'Unauthorized' });
+            return res.status(403).json({ message: getTranslation('UNAUTHORIZED', language, 'controllers', 'commentController') });
         }
 
         await connection.query(
@@ -127,9 +132,9 @@ export const deleteComment = async (req: Request, res: Response) => {
         );
         connection.release();
 
-        res.status(200).json({ message: 'Comment deleted successfully' });
+        res.status(200).json({ message: getTranslation('COMMENT_DELETED_SUCCESS', language, 'controllers', 'commentController') });
     } catch (error) {
         console.error('Error deleting comment:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'commentController') });
     }
 };

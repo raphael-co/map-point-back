@@ -2,12 +2,14 @@ import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 import pool from '../utils/config/dbConnection';
 import { getUserById } from '../utils/userUtils';
-import { notifyUser } from './notificationsCoontroller';
+import { notifyUser } from './notificationsController';
 import { io } from './setSocketServer';
+import getTranslation from '../utils/translate';  // Importer la fonction de traduction
 
 export const sendFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
     const userId = req.user!.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -21,10 +23,10 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         if (rows.length > 0) {
             if (rows[0].status === 'pending') {
                 connection.release();
-                return res.status(400).json({ status: 'error', message: 'Friend request already sent' });
+                return res.status(400).json({ status: 'error', message: getTranslation('FRIEND_REQUEST_ALREADY_SENT', language, 'controllers', 'friendController') });
             } else if (rows[0].status === 'accepted') {
                 connection.release();
-                return res.status(400).json({ status: 'error', message: 'Already following this user' });
+                return res.status(400).json({ status: 'error', message: getTranslation('ALREADY_FOLLOWING', language, 'controllers', 'friendController') });
             }
         }
 
@@ -37,7 +39,7 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         // Créer une notification pour l'utilisateur
         const user = await getUserById(userId);
         if (!user) {
-            return res.status(404).json({ status: 'error', message: 'User not found' });
+            return res.status(404).json({ status: 'error', message: getTranslation('USER_NOT_FOUND', language, 'controllers', 'friendController') });
         }
     
         const notificationContent = `${user.username} vous a envoyé une demande d'ami.`;
@@ -56,20 +58,20 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
 
         connection.release();
 
-        res.status(201).json({ status: 'success', message: 'Friend request sent successfully' });
+        res.status(201).json({ status: 'success', message: getTranslation('FRIEND_REQUEST_SENT_SUCCESS', language, 'controllers', 'friendController') });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'friendController') });
     }
 };
-
 
 export const acceptFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'friendController') });
     }
 
     try {
@@ -83,7 +85,7 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
 
         if (checkRequestRows.length === 0) {
             connection.release();
-            return res.status(400).json({ status: 'error', message: 'No pending friend request from this user' });
+            return res.status(400).json({ status: 'error', message: getTranslation('NO_PENDING_FRIEND_REQUEST', language, 'controllers', 'friendController') });
         }
 
         // Accepter la demande de suivi dans les deux tables
@@ -96,23 +98,23 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
 
         const user = await getUserById(friendId);
         if (!user) {
-            return res.status(404).json({ status: 'error', message: 'User not found' });
+            return res.status(404).json({ status: 'error', message: getTranslation('USER_NOT_FOUND', language, 'controllers', 'friendController') });
         }
 
-        res.status(200).json({ status: 'success', message: `${user.username} can now see your points` });
+        res.status(200).json({ status: 'success', message: getTranslation('FRIEND_REQUEST_ACCEPTED', language, 'controllers', 'friendController').replace('{username}', user.username) });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'friendController') });
     }
 };
-
 
 export const rejectFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'friendController') });
     }
 
     try {
@@ -123,8 +125,8 @@ export const rejectFriendRequest = async (req: Request, res: Response) => {
         await connection.query('DELETE FROM followers WHERE user_id = ? AND follower_id = ?', [friendId, userId]);
         connection.release();
 
-          // Émettre un événement Socket.IO pour mettre à jour la notification
-          if (io) {
+        // Émettre un événement Socket.IO pour mettre à jour la notification
+        if (io) {
             io.to(`user_${friendId}`).emit('followRequestRejected', {
                 sender_user_id: userId,
                 type: 'follow',
@@ -132,16 +134,16 @@ export const rejectFriendRequest = async (req: Request, res: Response) => {
             });
         }
         
-        res.status(200).json({ status: 'success', message: 'Unfollowed successfully' });
+        res.status(200).json({ status: 'success', message: getTranslation('FRIEND_REQUEST_REJECTED', language, 'controllers', 'friendController') });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'friendController') });
     }
 };
 
-
 export const listFollowing = async (req: Request, res: Response) => {
     const { userId } = req.params;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -166,12 +168,13 @@ export const listFollowing = async (req: Request, res: Response) => {
         res.status(200).json({ status: 'success', following });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'friendController') });
     }
 };
 
 export const listFollowers = async (req: Request, res: Response) => {
     const { userId } = req.params;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
@@ -196,15 +199,16 @@ export const listFollowers = async (req: Request, res: Response) => {
         res.status(200).json({ status: 'success', followers });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'friendController') });
     }
 };
 
 export const listFriendRequests = async (req: Request, res: Response) => {
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'friendController') });
     }
 
     try {
@@ -231,6 +235,6 @@ export const listFriendRequests = async (req: Request, res: Response) => {
         res.status(200).json({ status: 'success', friendRequests });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'friendController') });
     }
 };

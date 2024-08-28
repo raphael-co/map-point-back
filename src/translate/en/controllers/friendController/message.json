@@ -1,0 +1,12 @@
+{
+    "FRIEND_REQUEST_ALREADY_SENT": "Friend request already sent",
+    "ALREADY_FOLLOWING": "Already following this user",
+    "USER_NOT_FOUND": "User not found",
+    "FRIEND_REQUEST_SENT_SUCCESS": "Friend request sent successfully",
+    "INTERNAL_SERVER_ERROR": "Internal server error",
+    "UNAUTHORIZED": "Unauthorized",
+    "NO_PENDING_FRIEND_REQUEST": "No pending friend request from this user",
+    "FRIEND_REQUEST_ACCEPTED": "{username} can now see your points",
+    "FRIEND_REQUEST_REJECTED": "Friend request rejected",
+    "UNFOLLOWED_SUCCESS": "Unfollowed successfully"
+}

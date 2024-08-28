@@ -1,0 +1,10 @@
+{
+    "RATING_BETWEEN_1_AND_5": "Rating must be between 1 and 5",
+    "ALREADY_COMMENTED": "You have already commented on this marker.",
+    "COMMENT_ADDED_SUCCESS": "Comment added successfully",
+    "INTERNAL_SERVER_ERROR": "Internal server error",
+    "COMMENT_NOT_FOUND": "Comment not found",
+    "UNAUTHORIZED": "Unauthorized",
+    "COMMENT_UPDATED_SUCCESS": "Comment updated successfully",
+    "COMMENT_DELETED_SUCCESS": "Comment deleted successfully"
+}

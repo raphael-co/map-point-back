@@ -1,0 +1,10 @@
+{
+    "RATING_BETWEEN_1_AND_5": "La note doit être comprise entre 1 et 5",
+    "ALREADY_COMMENTED": "Vous avez déjà commenté ce marqueur.",
+    "COMMENT_ADDED_SUCCESS": "Commentaire ajouté avec succès",
+    "INTERNAL_SERVER_ERROR": "Erreur interne du serveur",
+    "COMMENT_NOT_FOUND": "Commentaire non trouvé",
+    "UNAUTHORIZED": "Non autorisé",
+    "COMMENT_UPDATED_SUCCESS": "Commentaire mis à jour avec succès",
+    "COMMENT_DELETED_SUCCESS": "Commentaire supprimé avec succès"
+}

@@ -1,0 +1,11 @@
+{
+    "UNAUTHORIZED": "Non autorisé",
+    "NO_NOTIFICATIONS_FOUND": "Aucune notification trouvée",
+    "INTERNAL_SERVER_ERROR": "Erreur interne du serveur",
+    "RECEIVER_ID_TYPE_REQUIRED": "L'ID de l'utilisateur destinataire et le type de notification sont requis",
+    "NOTIFICATION_CREATED_SUCCESS": "Notification créée avec succès",
+    "NOTIFICATION_NOT_FOUND_OR_UNAUTHORIZED": "Notification non trouvée ou non autorisée",
+    "NOTIFICATION_MARKED_AS_READ": "Notification marquée comme lue",
+    "NOTIFICATION_DELETED_SUCCESS": "Notification supprimée avec succès",
+    "ANONYMOUS": "Anonyme"
+}

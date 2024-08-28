@@ -4,12 +4,14 @@ import pool from '../utils/config/dbConnection';
 import { PoolConnection } from 'mysql2/promise';
 import { io } from './setSocketServer'; // Assurez-vous que l'import est correct
 import { User } from '../utils/userUtils';
+import getTranslation from '../utils/translate';  // Importer la fonction de traduction
 
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController') });
     }
 
     try {
@@ -32,13 +34,13 @@ export const getUserNotifications = async (req: Request, res: Response) => {
         connection.release();
 
         if (notifications.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'No notifications found' });
+            return res.status(404).json({ status: 'error', message: getTranslation('NO_NOTIFICATIONS_FOUND', language, 'controllers', 'notificationsController') });
         }
 
         res.status(200).json({ status: 'success', notifications });
     } catch (error) {
         console.error('Error fetching notifications:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController') });
     }
 };
 
@@ -46,13 +48,14 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 export const createNotification = async (req: Request, res: Response) => {
     const { receiverUserId, type, content } = req.body;
     const senderUserId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!senderUserId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController') });
     }
 
     if (!receiverUserId || !type) {
-        return res.status(400).json({ status: 'error', message: 'Receiver user ID and notification type are required' });
+        return res.status(400).json({ status: 'error', message: getTranslation('RECEIVER_ID_TYPE_REQUIRED', language, 'controllers', 'notificationsController') });
     }
 
     try {
@@ -73,10 +76,10 @@ export const createNotification = async (req: Request, res: Response) => {
             });
         }
 
-        res.status(201).json({ status: 'success', message: 'Notification created successfully' });
+        res.status(201).json({ status: 'success', message: getTranslation('NOTIFICATION_CREATED_SUCCESS', language, 'controllers', 'notificationsController') });
     } catch (error) {
         console.error('Error creating notification:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController') });
     }
 };
 
@@ -84,9 +87,10 @@ export const createNotification = async (req: Request, res: Response) => {
 export const markNotificationAsRead = async (req: Request, res: Response) => {
     const { notificationId } = req.params;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController') });
     }
 
     try {
@@ -98,13 +102,13 @@ export const markNotificationAsRead = async (req: Request, res: Response) => {
         connection.release();
 
         if ((result as any).affectedRows === 0) {
-            return res.status(404).json({ status: 'error', message: 'Notification not found or not authorized' });
+            return res.status(404).json({ status: 'error', message: getTranslation('NOTIFICATION_NOT_FOUND_OR_UNAUTHORIZED', language, 'controllers', 'notificationsController') });
         }
 
-        res.status(200).json({ status: 'success', message: 'Notification marked as read' });
+        res.status(200).json({ status: 'success', message: getTranslation('NOTIFICATION_MARKED_AS_READ', language, 'controllers', 'notificationsController') });
     } catch (error) {
         console.error('Error marking notification as read:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController') });
     }
 };
 
@@ -112,9 +116,10 @@ export const markNotificationAsRead = async (req: Request, res: Response) => {
 export const deleteNotification = async (req: Request, res: Response) => {
     const { notificationId } = req.params;
     const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController') });
     }
 
     try {
@@ -126,19 +131,20 @@ export const deleteNotification = async (req: Request, res: Response) => {
         connection.release();
 
         if ((result as any).affectedRows === 0) {
-            return res.status(404).json({ status: 'error', message: 'Notification not found or not authorized' });
+            return res.status(404).json({ status: 'error', message: getTranslation('NOTIFICATION_NOT_FOUND_OR_UNAUTHORIZED', language, 'controllers', 'notificationsController') });
         }
 
-        res.status(200).json({ status: 'success', message: 'Notification deleted successfully' });
+        res.status(200).json({ status: 'success', message: getTranslation('NOTIFICATION_DELETED_SUCCESS', language, 'controllers', 'notificationsController') });
     } catch (error) {
         console.error('Error deleting notification:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController') });
     }
 };
 
 // Notifier tous les followers
 export const notifyFollowers = async (userId: number, type: string, content: string, accepted: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
+    const language = 'en'; // Langue par défaut, peut être modifiée si nécessaire
 
     try {
         const [followers] = await connection.query<RowDataPacket[]>(
@@ -205,9 +211,9 @@ export const notifyFollowers = async (userId: number, type: string, content: str
     }
 };
 
-
-export const notifyUser = async (userId: number, idReceiver: number, type: string, user : User | null, content: string): Promise<void> => {
+export const notifyUser = async (userId: number, idReceiver: number, type: string, user: User | null, content: string): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
+    const language = 'en'; // Langue par défaut, peut être modifiée si nécessaire
 
     try {
         // Vérifier si une notification similaire existe déjà
@@ -246,7 +252,7 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
             io.to(`user_${idReceiver}`).emit('getNotification', {
                 sender_user_id: userId,
                 type: type,
-                sender_username: user?.username ?? 'Anonymous', // Default to 'Anonymous' if null
+                sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'), // Default to 'Anonymous' if null
                 profile_image_url: user?.profile_image_url ?? null,
                 content: content,
                 created_at: new Date()
@@ -264,4 +270,3 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
         connection.release();
     }
 };
-
