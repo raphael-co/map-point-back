@@ -282,7 +282,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
             from: '"Password Reset" <your-email@gmail.com>',
             to: email,
             subject: 'Password Reset Request',
-            text: getTranslation('PASSWORD_RESET_TOKEN_SENT', language,'controllers','authController').replace('{token}', resetToken)
+            text: getTranslation('PASSWORD_RESET_TOKEN_SENT', language,'controllers','authController') + ' ' + resetToken
         };
 
         await transporter.sendMail(mailOptions);
