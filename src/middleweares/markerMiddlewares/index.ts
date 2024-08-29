@@ -18,15 +18,15 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
     upload(req, res, (err) => {
         if (err) {
             console.log('File upload error:', err);
-            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (!req.files || (req.files as Express.Multer.File[]).length < 2) {
-            return res.status(400).json({ status: 'error', message: getTranslation('MINIMUM_IMAGES_REQUIRED', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('MINIMUM_IMAGES_REQUIRED', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if ((req.files as Express.Multer.File[]).length > 5) {
-            return res.status(400).json({ status: 'error', message: getTranslation('MAXIMUM_IMAGES_EXCEEDED', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('MAXIMUM_IMAGES_EXCEEDED', language, 'middlewares', 'markerMiddlewares') });
         }
 
         let { visibility, title, description, latitude, longitude, type, ratings, comment } = req.body;
@@ -42,15 +42,15 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
             type = iconv.decode(Buffer.from(type.trim(), 'binary'), 'utf-8');
         } catch (e) {
             console.log("Error decoding URI components:", e);
-            return res.status(400).json({ status: 'error', message: getTranslation('DECODING_ERROR', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('DECODING_ERROR', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (title.length > 255) {
-            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (isNaN(Number(latitude)) || isNaN(Number(longitude))) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_LAT_LONG', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_LAT_LONG', language, 'middlewares', 'markerMiddlewares') });
         }
 
         latitude = parseFloat(latitude);
@@ -58,17 +58,17 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
 
         const validTypes = ['park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other'];
         if (!validTypes.includes(type)) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TYPE', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TYPE', language, 'middlewares', 'markerMiddlewares') });
         }
 
         const validTypesVisibility = ['private', 'friends', 'public'];
         if (!validTypesVisibility.includes(visibility)) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY', language, 'middlewares', 'validateCreateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (ratings) {
             if (typeof ratings !== 'object' || Array.isArray(ratings)) {
-                return res.status(400).json({ status: 'error', message: getTranslation('INVALID_RATINGS_FORMAT', language, 'middlewares', 'validateCreateMarker') });
+                return res.status(400).json({ status: 'error', message: getTranslation('INVALID_RATINGS_FORMAT', language, 'middlewares', 'markerMiddlewares') });
             }
 
             const decodedRatings: { [key: string]: number } = {};
@@ -77,11 +77,11 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
                     const decodedKey = iconv.decode(Buffer.from(key, 'binary'), 'utf-8');
                     const rating = Number(ratings[key]);
                     if (isNaN(rating) || rating < 1 || rating > 5) {
-                        return res.status(400).json({ status: 'error', message: getTranslation('RATING_OUT_OF_RANGE', language, 'middlewares', 'validateCreateMarker').replace('{label}', decodedKey) });
+                        return res.status(400).json({ status: 'error', message: getTranslation('RATING_OUT_OF_RANGE', language, 'middlewares', 'markerMiddlewares').replace('{label}', decodedKey) });
                     }
                     decodedRatings[decodedKey] = rating;
                 } catch (e) {
-                    return res.status(400).json({ status: 'error', message: getTranslation('DECODING_RATING_LABEL_ERROR', language, 'middlewares', 'validateCreateMarker') });
+                    return res.status(400).json({ status: 'error', message: getTranslation('DECODING_RATING_LABEL_ERROR', language, 'middlewares', 'markerMiddlewares') });
                 }
             }
             ratings = decodedRatings;
@@ -101,31 +101,31 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
 };
 
 export const validateUpdateMarker = (req: Request, res: Response, next: NextFunction) => {
+    console.log("Validating update marker middleware...");
     const language = getLanguageFromRequest(req);
-    console.log("validateUpdateMarker - Start", req.body);
     upload(req, res, (err) => {
         if (err) {
             console.log('File upload error:', err);
-            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'markerMiddlewares') });
         }
 
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ status: 'error', message: getTranslation('MARKER_ID_REQUIRED', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('MARKER_ID_REQUIRED', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (req.files && (req.files as Express.Multer.File[]).length > 0 && (req.files as Express.Multer.File[]).length < 2) {
-            return res.status(400).json({ status: 'error', message: getTranslation('MINIMUM_IMAGES_REQUIRED', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('MINIMUM_IMAGES_REQUIRED', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if ((req.files as Express.Multer.File[]).length > 5) {
-            return res.status(400).json({ status: 'error', message: getTranslation('MAXIMUM_IMAGES_EXCEEDED', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('MAXIMUM_IMAGES_EXCEEDED', language, 'middlewares', 'markerMiddlewares') });
         }
 
         let { visibility, title, description, latitude, longitude, type, ratings, comment } = req.body;
 
         if (!title && !latitude && !longitude && !type && !visibility && !comment && !ratings) {
-            return res.status(400).json({ status: 'error', message: getTranslation('REQUIRED_FIELDS_MISSING', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('REQUIRED_FIELDS_MISSING', language, 'middlewares', 'markerMiddlewares') });
         }
 
         try {
@@ -135,15 +135,15 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
             if (type) type = iconv.decode(Buffer.from(type.trim(), 'binary'), 'utf-8');
         } catch (e) {
             console.log("Error decoding URI components:", e);
-            return res.status(400).json({ status: 'error', message: getTranslation('DECODING_ERROR', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('DECODING_ERROR', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (title && title.length > 255) {
-            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if ((latitude && isNaN(Number(latitude))) || (longitude && isNaN(Number(longitude)))) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_LAT_LONG', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_LAT_LONG', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (latitude) latitude = parseFloat(latitude);
@@ -151,17 +151,17 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
 
         const validTypes = ['park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other'];
         if (type && !validTypes.includes(type)) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TYPE', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_TYPE', language, 'middlewares', 'markerMiddlewares') });
         }
 
         const validTypesVisibility = ['private', 'friends', 'public'];
         if (visibility && !validTypesVisibility.includes(visibility)) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY', language, 'middlewares', 'validateUpdateMarker') });
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY', language, 'middlewares', 'markerMiddlewares') });
         }
 
         if (ratings) {
             if (typeof ratings !== 'object' || Array.isArray(ratings)) {
-                return res.status(400).json({ status: 'error', message: getTranslation('INVALID_RATINGS_FORMAT', language, 'middlewares', 'validateUpdateMarker') });
+                return res.status(400).json({ status: 'error', message: getTranslation('INVALID_RATINGS_FORMAT', language, 'middlewares', 'markerMiddlewares') });
             }
 
             const decodedRatings: { [key: string]: number } = {};
@@ -170,16 +170,15 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
                     const decodedKey = iconv.decode(Buffer.from(key, 'binary'), 'utf-8');
                     const rating = Number(ratings[key]);
                     if (isNaN(rating) || rating < 1 || rating > 5) {
-                        return res.status(400).json({ status: 'error', message: getTranslation('RATING_OUT_OF_RANGE', language, 'middlewares', 'validateUpdateMarker').replace('{label}', decodedKey) });
+                        return res.status(400).json({ status: 'error', message: getTranslation('RATING_OUT_OF_RANGE', language, 'middlewares', 'markerMiddlewares').replace('{label}', decodedKey) });
                     }
                     decodedRatings[decodedKey] = rating;
                 } catch (e) {
-                    return res.status(400).json({ status: 'error', message: getTranslation('DECODING_RATING_LABEL_ERROR', language, 'middlewares', 'validateUpdateMarker') });
+                    return res.status(400).json({ status: 'error', message: getTranslation('DECODING_RATING_LABEL_ERROR', language, 'middlewares', 'markerMiddlewares') });
                 }
             }
             ratings = decodedRatings;
         }
-
         req.body.title = title;
         req.body.description = description;
         req.body.latitude = latitude;
@@ -189,6 +188,8 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
         req.body.comment = comment;
         req.body.visibility = visibility;
 
+        console.log('End of markerMiddlewares');
+        
         next();
     });
 };

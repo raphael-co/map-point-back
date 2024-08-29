@@ -310,7 +310,19 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
     }
 };
 
-// Update marker function
+
+const getDistanceFromLatLonInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Rayon de la Terre en mètres
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance en mètres
+    return distance;
+};
+
 export const updateMarker = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, description, latitude, longitude, type, ratings, comment, visibility } = req.body;
@@ -338,8 +350,8 @@ export const updateMarker = async (req: Request, res: Response) => {
 
         // Update the marker's details
         await connection.query(
-            `UPDATE Markers SET title = ?, description = ?, latitude = ?, longitude = ?, type = ?, visibility = ?, comment = ? WHERE id = ?`,
-            [title, description, latitude, longitude, type, visibility, comment, id]
+            `UPDATE Markers SET title = ?, description = ?, type = ?, visibility = ?, comment = ? WHERE id = ?`,
+            [title, description, type, visibility, comment, id]
         );
 
         // Handle ratings update
@@ -376,6 +388,20 @@ export const updateMarker = async (req: Request, res: Response) => {
                     }
                 }
             }
+        }
+        const markerLat = existingMarker[0].latitude;
+        const markerLon = existingMarker[0].longitude;
+
+        if (latitude && longitude) {
+            const distance = getDistanceFromLatLonInMeters(latitude, longitude, markerLat, markerLon);
+            if (distance > 30) {
+                console.log('trop loin');
+                connection.release();
+                return res.status(403).json({ status: 'error', message: getTranslation('TOO_FAR_TO_UPDATE_IMAGES', language, 'controllers', 'markerController') });
+            }
+        } else {
+            connection.release();
+            return res.status(400).json({ status: 'error', message: getTranslation('USER_LOCATION_REQUIRED', language, 'controllers', 'markerController') });
         }
 
         // Handle image updates

@@ -11,5 +11,7 @@
     "MARKER_NOT_FOUND_UNAUTHORIZED_ACCESS": "Marqueur non trouvé ou accès non autorisé.",
     "MARKER_UPDATED_SUCCESS": "Marqueur mis à jour avec succès.",
     "MARKER_DELETED_SUCCESS": "Marqueur supprimé avec succès.",
-    "MARKER_NOT_FOUND": "Marqueur non trouvé."
+    "MARKER_NOT_FOUND": "Marqueur non trouvé.",
+    "TOO_FAR_TO_UPDATE_IMAGES": "Vous êtes trop loin du marqueur pour mettre à jour les images.",
+    "USER_LOCATION_REQUIRED": "La localisation de l'utilisateur est requise pour mettre à jour le marqueur."
 }
