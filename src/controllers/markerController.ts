@@ -392,17 +392,6 @@ export const updateMarker = async (req: Request, res: Response) => {
         const markerLat = existingMarker[0].latitude;
         const markerLon = existingMarker[0].longitude;
 
-        if (latitude && longitude) {
-            const distance = getDistanceFromLatLonInMeters(latitude, longitude, markerLat, markerLon);
-            if (distance > 30) {
-                console.log('trop loin');
-                connection.release();
-                return res.status(403).json({ status: 'error', message: getTranslation('TOO_FAR_TO_UPDATE_IMAGES', language, 'controllers', 'markerController') });
-            }
-        } else {
-            connection.release();
-            return res.status(400).json({ status: 'error', message: getTranslation('USER_LOCATION_REQUIRED', language, 'controllers', 'markerController') });
-        }
 
         // Handle image updates
         if (files && files.length > 0) {
@@ -412,12 +401,25 @@ export const updateMarker = async (req: Request, res: Response) => {
                 [id]
             );
 
+
             const currentImageUrls = currentImages.map(image => image.image_url);
 
             // Upload new images
             for (const file of files) {
                 const existingFile = currentImageUrls.find(url => url.includes(file.originalname));
                 if (!existingFile) {
+                    if (latitude && longitude) {
+                        const distance = getDistanceFromLatLonInMeters(latitude, longitude, markerLat, markerLon);
+                        if (distance > 30) {
+                            console.log('trop loin');
+                            connection.release();
+                            return res.status(403).json({ status: 'error', message: getTranslation('TOO_FAR_TO_UPDATE_IMAGES', language, 'controllers', 'markerController') });
+                        }
+                    } else {
+                        connection.release();
+                        return res.status(400).json({ status: 'error', message: getTranslation('USER_LOCATION_REQUIRED', language, 'controllers', 'markerController') });
+                    }
+
                     // Only upload if the image is not already uploaded
                     const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
                         cloudinary.v2.uploader.upload_stream({
