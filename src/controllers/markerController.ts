@@ -409,6 +409,11 @@ export const updateMarker = async (req: Request, res: Response) => {
                 const existingFile = currentImageUrls.find(url => url.includes(file.originalname));
                 if (!existingFile) {
                     if (latitude && longitude) {
+                        console.log(existingFile);
+                        
+                        console.log('latitude:', latitude, 'longitude:', longitude);
+                        console.log('markerLat:', markerLat, 'markerLon:', markerLon);
+                        
                         const distance = getDistanceFromLatLonInMeters(latitude, longitude, markerLat, markerLon);
                         if (distance > 30) {
                             console.log('trop loin');
