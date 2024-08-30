@@ -66,6 +66,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
             } else {
                 return {
                     ...baseNotification,
+                    follow_status: notification.follow_status,
                 };
             }
         });
