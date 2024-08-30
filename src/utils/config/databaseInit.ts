@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     content TEXT,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    event_id INT NULL, -- Identifiant de l'événement correspondant à la notification
     FOREIGN KEY (receiver_user_id) REFERENCES users(id),
     FOREIGN KEY (sender_user_id) REFERENCES users(id)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;

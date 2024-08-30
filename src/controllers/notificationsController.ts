@@ -60,7 +60,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
                 
                 return {
                     ...baseNotification,
-                    markerId: notification.marker_id, // Assuming marker_id exists in the notification object
+                    markerId: notification.event_id,
                 };
             } else {
                 return {
@@ -177,9 +177,16 @@ export const deleteNotification = async (req: Request, res: Response) => {
 };
 
 // Notifier tous les followers
-export const notifyFollowers = async (userId: number, type: string, content: string, accepted: string, user: User | null,markerId: number): Promise<void> => {
+export const notifyFollowers = async (
+    userId: number,
+    type: string,
+    content: string,
+    accepted: string,
+    user: User | null,
+    markerId: number // Include markerId as a parameter
+): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
-    const language = 'en'; // Langue par défaut, peut être modifiée si nécessaire
+    const language = 'en'; 
 
     try {
         const [followers] = await connection.query<RowDataPacket[]>(
@@ -190,20 +197,13 @@ export const notifyFollowers = async (userId: number, type: string, content: str
         const notificationPromises = followers.map(async (follower) => {
             const followerId = follower.follower_id;
 
-
-            // await connection.query(
-            //     'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
-            //     [followerId, userId, type, content]
-            // );
-
             console.log(type);
-            
+
             const [result] = await connection.query(
-                'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
-                [followerId, userId, type, content]
+                'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content, event_id) VALUES (?, ?, ?, ?, ?)',
+                [followerId, userId, type, content, markerId]
             );
             console.log('Notification inserted for follower:', followerId);
-
 
             // Send the notification via Socket.IO
             if (io) {
@@ -212,7 +212,7 @@ export const notifyFollowers = async (userId: number, type: string, content: str
                     type: type,
                     content: content,
                     timestamp: new Date(),
-                    sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'), // Default to 'Anonymous' if null
+                    sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'),
                     profile_image_url: user?.profile_image_url ?? null,
                     created_at: new Date(),
                     markerId: markerId
@@ -227,7 +227,6 @@ export const notifyFollowers = async (userId: number, type: string, content: str
         await Promise.all(notificationPromises);
 
         console.log('Notifications sent successfully to all followers.');
-
     } catch (error) {
         console.error('Error notifying followers:', error);
         throw error;
@@ -236,26 +235,33 @@ export const notifyFollowers = async (userId: number, type: string, content: str
     }
 };
 
-export const notifyUser = async (userId: number, idReceiver: number, type: string, user: User | null, content: string): Promise<void> => {
+export const notifyUser = async (
+    userId: number,
+    idReceiver: number,
+    type: string,
+    user: User | null,
+    content: string,
+    eventId?: number // Make eventId optional
+): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
-    const language = 'en'; // Langue par défaut, peut être modifiée si nécessaire
+    const language = 'en'; // Default language, can be modified if necessary
 
     try {
-        // Vérifier si une notification similaire existe déjà
+        // Check if a similar notification already exists
         const [existingNotification] = await connection.query<RowDataPacket[]>(
             'SELECT * FROM notifications WHERE receiver_user_id = ? AND sender_user_id = ? AND type = ?',
             [idReceiver, userId, type]
         );
 
         if (existingNotification.length > 0) {
-            // Si une notification existe mais que son statut ou son contenu a changé, nous mettons à jour
+            // If a notification exists but its status or content has changed, update it
             const existingContent = existingNotification[0].content;
             if (existingContent === content) {
                 console.log('Notification already exists with the same content for receiver:', idReceiver);
-                return; // La notification existe déjà avec le même contenu, donc on ne fait rien
+                return; // The notification already exists with the same content, so do nothing
             }
 
-            // Mettre à jour le contenu de la notification existante
+            // Update the content of the existing notification
             await connection.query(
                 'UPDATE notifications SET content = ? WHERE id = ?',
                 [content, existingNotification[0].id]
@@ -263,31 +269,31 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
 
             console.log('Notification updated for receiver:', idReceiver, existingNotification[0].id);
         } else {
-            // Insérer la nouvelle notification si elle n'existe pas déjà
+            // Insert the new notification if it does not already exist
             const [result] = await connection.query(
-                'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
-                [idReceiver, userId, type, content]
+                'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content, event_id) VALUES (?, ?, ?, ?, ?)',
+                [idReceiver, userId, type, content, eventId || null] // Use eventId if provided, otherwise NULL
             );
 
             console.log('Notification inserted for receiver:', idReceiver, result);
         }
 
-        // Envoyer la notification via Socket.IO
+        // Send the notification via Socket.IO
         if (io) {
             io.to(`user_${idReceiver}`).emit('getNotification', {
                 sender_user_id: userId,
                 type: type,
-                sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'), // Default to 'Anonymous' if null
+                sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'),
                 profile_image_url: user?.profile_image_url ?? null,
                 content: content,
-                created_at: new Date()
+                created_at: new Date(),
+                event_id: eventId // Optionally include event_id if provided
             });
 
             console.log('Notification sent to user:', idReceiver);
         } else {
             console.error('Socket.IO instance is not initialized.');
         }
-
     } catch (error) {
         console.error('Error notifying user:', error);
         throw error;
@@ -295,3 +301,4 @@ export const notifyUser = async (userId: number, idReceiver: number, type: strin
         connection.release();
     }
 };
+
