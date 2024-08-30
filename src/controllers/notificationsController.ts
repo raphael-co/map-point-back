@@ -56,6 +56,8 @@ export const getUserNotifications = async (req: Request, res: Response) => {
             };
 
             if (notification.type === 'marker') {
+                console.log("notification.marker_id", notification.marker_id);
+                
                 return {
                     ...baseNotification,
                     markerId: notification.marker_id, // Assuming marker_id exists in the notification object
