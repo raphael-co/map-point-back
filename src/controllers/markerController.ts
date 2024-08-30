@@ -94,7 +94,6 @@ export const createMarker = async (req: Request, res: Response) => {
         );
 
         // Répondre au client immédiatement avant de gérer les notifications
-        res.status(201).json({ status: 'success', message: getTranslation('MARKER_CREATED_SUCCESS', language, 'controllers', 'markerController'), markerId });
 
         // Commencer le traitement des images
         await Promise.all(imageUploadPromises);
@@ -103,10 +102,13 @@ export const createMarker = async (req: Request, res: Response) => {
 
         // Notifier les followers avec la nouvelle notification de création de marker
         const notificationContent = getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{username}', user.username).replace('{title}', title);
-        await notifyFollowers(userId, 'marker', notificationContent, 'accepted', user,markerId);
+        await notifyFollowers(userId, 'marker', notificationContent, 'accepted', user, markerId);
 
         connection.release();
         // io.emit('markersUpdated');
+
+        return res.status(201).json({ status: 'success', message: getTranslation('MARKER_CREATED_SUCCESS', language, 'controllers', 'markerController'), markerId });
+
     } catch (error) {
         console.error('Error creating marker:', error);
         res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
