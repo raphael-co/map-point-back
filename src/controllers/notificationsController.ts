@@ -155,34 +155,18 @@ export const notifyFollowers = async (userId: number, type: string, content: str
         const notificationPromises = followers.map(async (follower) => {
             const followerId = follower.follower_id;
 
-            // Check if a similar notification already exists
-            const [existingNotification] = await connection.query<RowDataPacket[]>(
-                'SELECT * FROM notifications WHERE receiver_user_id = ? AND sender_user_id = ? AND type = ?',
-                [followerId, userId, type]
+
+            // await connection.query(
+            //     'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
+            //     [followerId, userId, type, content]
+            // );
+
+            const [result] = await connection.query(
+                'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
+                [followerId, userId, "follow", content]
             );
+            console.log('Notification inserted for follower:', followerId);
 
-            if (existingNotification.length > 0) {
-                const existingContent = existingNotification[0].content;
-                if (existingContent === content) {
-                    console.log('Notification already exists with the same content for follower:', followerId);
-                    return; // If the notification exists with the same content, do nothing
-                }
-
-                // Update the content of the existing notification
-                await connection.query(
-                    'UPDATE notifications SET content = ? WHERE id = ?',
-                    [content, existingNotification[0].id]
-                );
-
-                console.log('Notification updated for follower:', followerId, existingNotification[0].id);
-            } else {
-                // Insert the new notification if it doesn't already exist
-                await connection.query(
-                    'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
-                    [followerId, userId, type, content]
-                );
-                console.log('Notification inserted for follower:', followerId);
-            }
 
             // Send the notification via Socket.IO
             if (io) {
