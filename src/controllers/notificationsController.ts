@@ -161,9 +161,11 @@ export const notifyFollowers = async (userId: number, type: string, content: str
             //     [followerId, userId, type, content]
             // );
 
+            console.log(type);
+            
             const [result] = await connection.query(
                 'INSERT INTO notifications (receiver_user_id, sender_user_id, type, content) VALUES (?, ?, ?, ?)',
-                [followerId, userId, "follow", content]
+                [followerId, userId, type, content]
             );
             console.log('Notification inserted for follower:', followerId);
 

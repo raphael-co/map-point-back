@@ -6,7 +6,7 @@
     "UNAUTHORIZED_ACCESS": "Accès non autorisé.",
     "INVALID_VISIBILITY_PARAMETER": "Paramètre de visibilité invalide.",
     "NO_MARKERS_FOUND": "Aucun marqueur trouvé.",
-    "NEW_MARKER_NOTIFICATION": "L'utilisateur {userId} a ajouté un nouveau marqueur intitulé '{title}'.",
+    "NEW_MARKER_NOTIFICATION": "{username} a ajouté un nouveau marqueur intitulé '{title}'.",
     "MARKER_ID_USER_ID_REQUIRED": "L'ID du marqueur et l'ID de l'utilisateur sont requis.",
     "MARKER_NOT_FOUND_UNAUTHORIZED_ACCESS": "Marqueur non trouvé ou accès non autorisé.",
     "MARKER_UPDATED_SUCCESS": "Marqueur mis à jour avec succès.",
