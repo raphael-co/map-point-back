@@ -21,6 +21,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
         const connection = await pool.getConnection();
         const [notifications] = await connection.query<RowDataPacket[]>(
             `SELECT n.id, n.sender_user_id, u.username as sender_username, u.profile_image_url, n.type, n.content, n.is_read, n.created_at, 
+            n.event_id,  -- Include event_id in the SELECT statement
             CASE 
                 WHEN f.status = 'accepted' THEN 'true'
                 WHEN f.status = 'pending' THEN 'null'
@@ -55,12 +56,12 @@ export const getUserNotifications = async (req: Request, res: Response) => {
                 created_at: notification.created_at,
             };
 
-            if (notification.type === 'marker') {
-                console.log("notification.marker_id", notification.marker_id);
+            if (notification.type === 'marker' && notification.event_id) {
+                console.log("notification.event_id", notification.event_id);
                 
                 return {
                     ...baseNotification,
-                    markerId: notification.event_id,
+                    event_id: notification.event_id,
                 };
             } else {
                 return {
@@ -215,7 +216,7 @@ export const notifyFollowers = async (
                     sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'),
                     profile_image_url: user?.profile_image_url ?? null,
                     created_at: new Date(),
-                    markerId: markerId
+                    event_id: markerId
                 });
 
                 console.log('Notification sent to follower:', followerId);
@@ -301,4 +302,3 @@ export const notifyUser = async (
         connection.release();
     }
 };
-
