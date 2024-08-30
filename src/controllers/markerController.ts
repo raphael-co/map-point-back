@@ -102,7 +102,7 @@ export const createMarker = async (req: Request, res: Response) => {
         // Notifier les followers
 
         // Notifier les followers avec la nouvelle notification de création de marker
-        const notificationContent = getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{username}', user.username);
+        const notificationContent = getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{username}', user.username).replace('{title}', title);
         await notifyFollowers(userId, 'marker', notificationContent, 'accepted', user,markerId);
 
         connection.release();

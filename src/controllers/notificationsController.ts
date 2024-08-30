@@ -282,7 +282,7 @@ export const notifyUser = async (
         // Send the notification via Socket.IO
         if (io) {
             io.to(`user_${idReceiver}`).emit('getNotification', {
-                sender_user_id: userId,
+                senderUserId: userId,
                 type: type,
                 sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'),
                 profile_image_url: user?.profile_image_url ?? null,
