@@ -50,7 +50,7 @@ export const sendFriendRequest = async (req: Request, res: Response) => {
         // Émettre un événement Socket.IO pour mettre à jour la notification existante
         if (io) {
             io.to(`user_${friendId}`).emit('followRequestUpdated', {
-                sender_user_id: userId,
+                senderUserId: userId,
                 type: 'follow',
                 follow_status: 'null', // Indique que la demande est à nouveau en attente
             });
@@ -128,9 +128,9 @@ export const rejectFriendRequest = async (req: Request, res: Response) => {
         // Émettre un événement Socket.IO pour mettre à jour la notification
         if (io) {
             io.to(`user_${friendId}`).emit('followRequestRejected', {
-                sender_user_id: userId,
+                senderUserId: userId,
                 type: 'follow',
-                follow_status: 'false', // Indique que la demande a été rejetée
+                follow_status: 'false'
             });
         }
         
