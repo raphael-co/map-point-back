@@ -5,6 +5,7 @@ import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
 import { notifyFollowers } from './notificationsController';
 import getTranslation from '../utils/translate';  // Importer la fonction de traduction
+import { getUserById } from '../utils/userUtils';
 
 dotenv.config();
 
@@ -30,6 +31,11 @@ export const createMarker = async (req: Request, res: Response) => {
     }
 
     const userId = req.user!.id;
+
+    const user = await getUserById(userId);
+    if (!user) {
+        return res.status(404).json({ status: 'error', message: getTranslation('USER_NOT_FOUND', language, 'controllers', 'friendController') });
+    }
 
     try {
         const connection = await pool.getConnection();
@@ -94,7 +100,12 @@ export const createMarker = async (req: Request, res: Response) => {
         await Promise.all(imageUploadPromises);
 
         // Notifier les followers
-        notifyFollowers(userId, 'new_marker', getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{title}', title), 'accepted');
+
+        // Notifier les followers avec la nouvelle notification de création de marker
+        const notificationContent = getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{title}', title);
+        await notifyFollowers(userId, 'marker', notificationContent, 'accepted', user);
+
+        // notifyFollowers(userId, 'new_marker', getTranslation('NEW_MARKER_NOTIFICATION', language, 'controllers', 'markerController').replace('{title}', title), 'accepted');
 
         connection.release();
         // io.emit('markersUpdated');
@@ -410,10 +421,10 @@ export const updateMarker = async (req: Request, res: Response) => {
                 if (!existingFile) {
                     if (latitude && longitude) {
                         console.log(existingFile);
-                        
+
                         console.log('latitude:', latitude, 'longitude:', longitude);
                         console.log('markerLat:', markerLat, 'markerLon:', markerLon);
-                        
+
                         const distance = getDistanceFromLatLonInMeters(latitude, longitude, markerLat, markerLon);
                         if (distance > 30) {
                             console.log('trop loin');

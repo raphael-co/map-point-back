@@ -142,7 +142,7 @@ export const deleteNotification = async (req: Request, res: Response) => {
 };
 
 // Notifier tous les followers
-export const notifyFollowers = async (userId: number, type: string, content: string, accepted: string): Promise<void> => {
+export const notifyFollowers = async (userId: number, type: string, content: string, accepted: string, user: User | null): Promise<void> => {
     const connection: PoolConnection = await pool.getConnection();
     const language = 'en'; // Langue par défaut, peut être modifiée si nécessaire
 
@@ -190,7 +190,10 @@ export const notifyFollowers = async (userId: number, type: string, content: str
                     senderUserId: userId,
                     type: type,
                     content: content,
-                    timestamp: new Date()
+                    timestamp: new Date(),
+                    sender_username: user?.username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'), // Default to 'Anonymous' if null
+                    profile_image_url: user?.profile_image_url ?? null,
+                    created_at: new Date()
                 });
 
                 console.log('Notification sent to follower:', followerId);
