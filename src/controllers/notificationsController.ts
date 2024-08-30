@@ -8,10 +8,13 @@ import getTranslation from '../utils/translate';  // Importer la fonction de tra
 
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = req.headers['accept-language'] || 'en'; // Determine the language from request headers
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController') });
+        return res.status(401).json({
+            status: 'error',
+            message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController'),
+        });
     }
 
     try {
@@ -34,13 +37,43 @@ export const getUserNotifications = async (req: Request, res: Response) => {
         connection.release();
 
         if (notifications.length === 0) {
-            return res.status(404).json({ status: 'error', message: getTranslation('NO_NOTIFICATIONS_FOUND', language, 'controllers', 'notificationsController') });
+            return res.status(404).json({
+                status: 'error',
+                message: getTranslation('NO_NOTIFICATIONS_FOUND', language, 'controllers', 'notificationsController'),
+            });
         }
 
-        res.status(200).json({ status: 'success', notifications });
+        // Transform notifications based on type
+        const formattedNotifications = notifications.map(notification => {
+            const baseNotification = {
+                senderUserId: notification.sender_user_id,
+                type: notification.type,
+                content: notification.content,
+                timestamp: notification.created_at,
+                sender_username: notification.sender_username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'),
+                profile_image_url: notification.profile_image_url ?? null,
+                created_at: notification.created_at,
+            };
+
+            if (notification.type === 'marker') {
+                return {
+                    ...baseNotification,
+                    markerId: notification.marker_id, // Assuming marker_id exists in the notification object
+                };
+            } else {
+                return {
+                    ...baseNotification,
+                };
+            }
+        });
+
+        res.status(200).json({ status: 'success', notifications: formattedNotifications });
     } catch (error) {
         console.error('Error fetching notifications:', error);
-        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController') });
+        res.status(500).json({
+            status: 'error',
+            message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController'),
+        });
     }
 };
 
