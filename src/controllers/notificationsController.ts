@@ -304,6 +304,7 @@ export const notifyUser = async (
             );
 
             console.log(tokens);
+            console.log(idReceiver);
             
             // Define notification title and body based on the type of notification or other logic
             const title = 'New Notification'; // Customize based on context
