@@ -67,6 +67,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
                 senderUserId: notification.sender_user_id,
                 type: notification.type,
                 content: notification.content,
+                is_read: notification.is_read,
                 timestamp: notification.created_at,
                 sender_username: notification.sender_username ?? getTranslation('ANONYMOUS', language, 'controllers', 'notificationsController'),
                 profile_image_url: notification.profile_image_url ?? null,
