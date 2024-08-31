@@ -9,7 +9,7 @@ import axios from 'axios';
 
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    const language = req.headers['accept-language'] || 'en'; // Determine the language from request headers
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir des en-têtes de requête
 
     if (!userId) {
         return res.status(401).json({
@@ -20,22 +20,27 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 
     try {
         const connection = await pool.getConnection();
+        
+        // Requête pour récupérer les notifications et le nombre de notifications non lues dans une seule requête
         const [notifications] = await connection.query<RowDataPacket[]>(
-            `SELECT n.id, n.sender_user_id, u.username as sender_username, u.profile_image_url, n.type, n.content, n.is_read, n.created_at, 
-            n.event_id,  -- Include event_id in the SELECT statement
-            CASE 
-                WHEN f.status = 'accepted' THEN 'true'
-                WHEN f.status = 'pending' THEN 'null'
-                WHEN f.status IS NULL THEN 'canceled'
-                ELSE 'false'
-            END as follow_status
+            `SELECT n.id, n.sender_user_id, u.username as sender_username, u.profile_image_url, 
+                    n.type, n.content, n.is_read, n.created_at, n.event_id,
+                    CASE 
+                        WHEN f.status = 'accepted' THEN 'true'
+                        WHEN f.status = 'pending' THEN 'null'
+                        WHEN f.status IS NULL THEN 'canceled'
+                        ELSE 'false'
+                    END as follow_status,
+                    (SELECT COUNT(*) FROM notifications 
+                     WHERE receiver_user_id = ? AND is_read = FALSE) as unreadCount
             FROM notifications n
             JOIN users u ON n.sender_user_id = u.id
             LEFT JOIN followings f ON n.sender_user_id = f.user_id AND n.receiver_user_id = f.following_id
             WHERE n.receiver_user_id = ?
             ORDER BY n.created_at DESC`,
-            [userId]
+            [userId, userId]
         );
+        
         connection.release();
 
         if (notifications.length === 0) {
@@ -45,7 +50,10 @@ export const getUserNotifications = async (req: Request, res: Response) => {
             });
         }
 
-        // Transform notifications based on type
+        // Récupération du nombre de notifications non lues à partir de la première ligne de résultat
+        const unreadNotificationsCount = notifications[0]?.unreadCount || 0;
+
+        // Transformer les notifications en fonction du type
         const formattedNotifications = notifications.map(notification => {
             const baseNotification = {
                 senderUserId: notification.sender_user_id,
@@ -58,8 +66,6 @@ export const getUserNotifications = async (req: Request, res: Response) => {
             };
 
             if (notification.type === 'marker' && notification.event_id) {
-                console.log("notification.event_id", notification.event_id);
-                
                 return {
                     ...baseNotification,
                     event_id: notification.event_id,
@@ -72,7 +78,11 @@ export const getUserNotifications = async (req: Request, res: Response) => {
             }
         });
 
-        res.status(200).json({ status: 'success', notifications: formattedNotifications });
+        res.status(200).json({ 
+            status: 'success', 
+            notifications: formattedNotifications,
+            unreadCount: unreadNotificationsCount // Inclure le nombre de notifications non lues
+        });
     } catch (error) {
         console.error('Error fetching notifications:', error);
         res.status(500).json({
