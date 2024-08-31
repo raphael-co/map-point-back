@@ -63,6 +63,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
         // Transformer les notifications en fonction du type
         const formattedNotifications = notifications.map(notification => {
             const baseNotification = {
+                id : notification.id,
                 senderUserId: notification.sender_user_id,
                 type: notification.type,
                 content: notification.content,
