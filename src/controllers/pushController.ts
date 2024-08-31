@@ -7,7 +7,7 @@ import getTranslation from '../utils/translate'; // Importer la fonction de trad
 // Fonction pour ajouter uniquement un token de notification push
 export const addPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!token) {
         return res.status(400).json({ success: false, error: getTranslation('TOKEN_REQUIRED', language, 'controllers', 'pushController') });
@@ -38,7 +38,7 @@ export const addPushToken = async (req: Request, res: Response) => {
 export const saveToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const userId = req.user?.id;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = 'fr' // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId) {
         return res.status(400).json({ success: false, error: getTranslation('USER_ID_REQUIRED', language, 'controllers', 'pushController') });
@@ -82,9 +82,11 @@ export const saveToken = async (req: Request, res: Response) => {
 // Function to send a push notification
 export const sendNotification = async (req: Request, res: Response) => {
     const { title, body } = req.body;
-    const userId = req.user?.id;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const userId = 1;
+    const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
+    console.log(userId);
+    
     if (!userId) {
         return res.status(400).json({ success: false, error: getTranslation('USER_ID_REQUIRED', language, 'controllers', 'pushController') });
     }
@@ -98,6 +100,8 @@ export const sendNotification = async (req: Request, res: Response) => {
              WHERE upt.user_id = ?`, [userId]
         );
 
+        console.log(tokens);
+        
         const messages = tokens.map(token => ({
             to: token.token.trim(),
             sound: 'default',
@@ -129,7 +133,7 @@ export const sendNotification = async (req: Request, res: Response) => {
 // Function to send notifications to multiple users
 export const sendNotificationToUsers = async (req: Request, res: Response) => {
     const { title, body, targetUserIds } = req.body;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
         return res.status(400).json({ success: false, error: getTranslation('INVALID_TARGET_USER_IDS', language, 'controllers', 'pushController') });
@@ -178,7 +182,7 @@ export const sendNotificationToUsers = async (req: Request, res: Response) => {
 export const linkUserWithPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const userId = req.user?.id;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId || !token) {
         return res.status(400).json({ success: false, error: getTranslation('USER_ID_AND_TOKEN_REQUIRED', language, 'controllers', 'pushController') });
@@ -223,7 +227,7 @@ export const linkUserWithPushToken = async (req: Request, res: Response) => {
 export const unlinkUserWithPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const userId = req.user?.id;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
     if (!userId || !token) {
         return res.status(400).json({ success: false, error: getTranslation('USER_ID_AND_TOKEN_REQUIRED', language, 'controllers', 'pushController') });
