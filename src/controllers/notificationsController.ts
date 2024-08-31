@@ -303,6 +303,8 @@ export const notifyUser = async (
                  WHERE upt.user_id = ?`, [idReceiver]
             );
 
+            console.log(tokens);
+            
             // Define notification title and body based on the type of notification or other logic
             const title = 'New Notification'; // Customize based on context
             const body = content; // Use the content directly or customize further
