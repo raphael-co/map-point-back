@@ -9,6 +9,7 @@ export const addPushToken = async (req: Request, res: Response) => {
     const { token } = req.body;
     const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
+    
     if (!token) {
         return res.status(400).json({ success: false, error: getTranslation('TOKEN_REQUIRED', language, 'controllers', 'pushController') });
     }
@@ -134,6 +135,7 @@ export const sendNotification = async (req: Request, res: Response) => {
 export const sendNotificationToUsers = async (req: Request, res: Response) => {
     const { title, body, targetUserIds } = req.body;
     const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
+
 
     if (!Array.isArray(targetUserIds) || targetUserIds.length === 0) {
         return res.status(400).json({ success: false, error: getTranslation('INVALID_TARGET_USER_IDS', language, 'controllers', 'pushController') });
