@@ -5,6 +5,7 @@ import { PoolConnection } from 'mysql2/promise';
 import { io } from './setSocketServer'; // Assurez-vous que l'import est correct
 import { User } from '../utils/userUtils';
 import getTranslation from '../utils/translate';  // Importer la fonction de traduction
+import axios from 'axios';
 
 export const getUserNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
@@ -293,6 +294,43 @@ export const notifyUser = async (
             });
 
             console.log('Notification sent to user:', idReceiver);
+
+            // Fetch push tokens for the user
+            const [tokens]: [RowDataPacket[], any] = await pool.query(
+                `SELECT pt.token 
+                 FROM UserPushTokens upt 
+                 JOIN PushTokens pt ON upt.push_token_id = pt.id 
+                 WHERE upt.user_id = ?`, [idReceiver]
+            );
+
+            // Define notification title and body based on the type of notification or other logic
+            const title = 'New Notification'; // Customize based on context
+            const body = content; // Use the content directly or customize further
+
+            // Create notification messages for each token
+            const messages = tokens.map(token => ({
+                to: token.token.trim(),
+                sound: 'default',
+                title: title,
+                body: body,
+                data: { someData: 'goes here' }, // Optional additional data
+            }));
+
+            // Send notifications via Expo API
+            const results = await Promise.all(
+                messages.map(message =>
+                    axios.post('https://exp.host/--/api/v2/push/send', message, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Accept-Encoding': 'gzip, deflate',
+                            'Content-Type': 'application/json',
+                        }
+                    }).then(response => response.data)
+                )
+            );
+
+            console.log('Notifications sent via Expo:', results);
+
         } else {
             console.error('Socket.IO instance is not initialized.');
         }
@@ -303,3 +341,4 @@ export const notifyUser = async (
         connection.release();
     }
 };
+
