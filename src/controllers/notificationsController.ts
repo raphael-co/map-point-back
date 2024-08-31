@@ -23,8 +23,15 @@ export const getUserNotifications = async (req: Request, res: Response) => {
         
         // Requête pour récupérer les notifications et le nombre de notifications non lues dans une seule requête
         const [notifications] = await connection.query<RowDataPacket[]>(
-            `SELECT n.id, n.sender_user_id, u.username as sender_username, u.profile_image_url, 
-                    n.type, n.content, n.is_read, n.created_at, n.event_id,
+            `SELECT n.id, -- Inclure explicitement l'ID de la notification
+                    n.sender_user_id, 
+                    u.username as sender_username, 
+                    u.profile_image_url, 
+                    n.type, 
+                    n.content, 
+                    n.is_read, 
+                    n.created_at, 
+                    n.event_id,
                     CASE 
                         WHEN f.status = 'accepted' THEN 'true'
                         WHEN f.status = 'pending' THEN 'null'
@@ -39,7 +46,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
             WHERE n.receiver_user_id = ?
             ORDER BY n.created_at DESC`,
             [userId, userId]
-        );
+        );        
         
         connection.release();
 
@@ -134,6 +141,8 @@ export const createNotification = async (req: Request, res: Response) => {
 // Mettre à jour le statut de lecture d'une notification
 export const markNotificationAsRead = async (req: Request, res: Response) => {
     const { notificationId } = req.params;
+    console.log(notificationId);
+    
     const userId = req.user?.id;
     const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
 
