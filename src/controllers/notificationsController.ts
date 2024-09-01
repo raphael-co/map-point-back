@@ -140,6 +140,47 @@ export const createNotification = async (req: Request, res: Response) => {
     }
 };
 
+// Mettre à jour tous les commentaires d'un utilisateur à is_read = true
+export const markAllNotificationsAsRead = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    const language = req.headers['accept-language'] || 'en'; // Determine the language from the request header
+
+    if (!userId) {
+        return res.status(401).json({
+            status: 'error',
+            message: getTranslation('UNAUTHORIZED', language, 'controllers', 'notificationsController'),
+        });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+        const [result] = await connection.query(
+            'UPDATE notifications SET is_read = TRUE WHERE receiver_user_id = ?',
+            [userId]
+        );
+        connection.release();
+
+        if ((result as any).affectedRows === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: getTranslation('NO_NOTIFICATIONS_TO_UPDATE', language, 'controllers', 'notificationsController'),
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: getTranslation('ALL_NOTIFICATIONS_MARKED_AS_READ', language, 'controllers', 'notificationsController'),
+        });
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        res.status(500).json({
+            status: 'error',
+            message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'notificationsController'),
+        });
+    }
+};
+
+
 // Mettre à jour le statut de lecture d'une notification
 export const markNotificationAsRead = async (req: Request, res: Response) => {
     const { notificationId } = req.params;

@@ -5,6 +5,7 @@ import {
     createNotification,
     markNotificationAsRead,
     deleteNotification,
+    markAllNotificationsAsRead,
 } from '../controllers/notificationsController';
 
 const notificationRouter = express.Router();
@@ -18,7 +19,10 @@ notificationRouter.post('/', authenticateToken, createNotification);
 // Marquer une notification comme lue
 notificationRouter.patch('/:notificationId/read', authenticateToken, markNotificationAsRead);
 
+notificationRouter.patch('/read', authenticateToken, markAllNotificationsAsRead);
+
 // Supprimer une notification
 notificationRouter.delete('/:notificationId', authenticateToken, deleteNotification);
+
 
 export default notificationRouter;
