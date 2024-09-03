@@ -126,10 +126,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
             const visibility = req.query.visibility as string;
             const markerTypes = req.query.type; // Get marker types from query parameters
 
-            console.log('getAllMarkers - User ID:', userId);
-            console.log('getAllMarkers - Visibility:', visibility);
-            console.log('getAllMarkers - Marker Types:', markerTypes);
-
             if (!userId) {
                 console.log('getAllMarkers - Unauthorized access attempt');
                 return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
@@ -168,7 +164,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                                     )
                                 ))`;
                     params.push(userId, userId);
-                    console.log('getAllMarkers - Query for friends markers:', query, params);
                     break;
 
                 case 'public':
@@ -195,11 +190,9 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                                )
                               )`;
                     params.push(userId, userId);
-                    console.log('getAllMarkers - Query for all markers:', query, params);
                     break;
 
                 default:
-                    console.log('getAllMarkers - Invalid visibility parameter:', visibility);
                     return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY_PARAMETER', language, 'controllers', 'markerController') });
             }
 
@@ -214,17 +207,11 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                 query += ` AND m.type IN (${placeholders})`;
                 params.push(...typesArray);
 
-                console.log('getAllMarkers - Marker type filter applied:', typesArray);
             }
 
             query += ` GROUP BY m.id`;
 
-            console.log('getAllMarkers - Final Query:', query);
-            console.log('getAllMarkers - Query Params:', params);
-
             const [markers] = await connection.query<RowDataPacket[]>(query, params);
-
-            console.log('getAllMarkers - Markers fetched:', markers);
 
             if (markers.length === 0) {
                 connection.release();
@@ -242,7 +229,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                     [marker.id]
                 );
                 marker.ratings = ratings; // Attach the ratings and labels to each marker
-                console.log(`getAllMarkers - Ratings for marker ${marker.id}:`, ratings);
             }
 
             // Format the markers to ensure correct JSON structure
@@ -250,8 +236,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                 ...marker,
                 images: JSON.parse(marker.images), // Parse images into JSON array
             }));
-
-            console.log('getAllMarkers - Formatted Markers:', formattedMarkers);
 
             connection.release();
 
