@@ -8,7 +8,7 @@ const markerRouter = Router();
 
 markerRouter.post('/create', authenticateToken, validateCreateMarker, createMarker);
 markerRouter.get('/', authenticateToken, getAllMarkers);
-markerRouter.put('/update/:id', authenticateToken, validateUpdateMarker, updateMarker); // New update route
+markerRouter.put('/update/:id', authenticateToken, validateUpdateMarker, updateMarker);
 markerRouter.get('/user', authenticateToken, getAllMarkersUserConnect);
 markerRouter.get('/user/:userId', authenticateToken, getMarkersByUser);
 
