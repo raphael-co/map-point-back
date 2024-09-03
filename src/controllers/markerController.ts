@@ -117,7 +117,7 @@ export const createMarker = async (req: Request, res: Response) => {
 
 
 export const getAllMarkers = async (req: Request, res: Response) => {
-    const language = req.headers['accept-language'] || 'en'; // Determine the language from the request header
+    const language = 'fr'; // Determine the language from the request header
 
     try {
         const connection = await pool.getConnection();
