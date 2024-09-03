@@ -9,7 +9,7 @@ import getTranslation from '../utils/translate';  // Importer la fonction de tra
 export const sendFriendRequest = async (req: Request, res: Response) => {
     const { friendId } = req.body;
     const userId = req.user!.id;
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = 'fr'; // Déterminer la langue à partir de l'en-tête de requête
 
     try {
         const connection = await pool.getConnection();
