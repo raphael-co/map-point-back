@@ -115,14 +115,16 @@ export const createMarker = async (req: Request, res: Response) => {
     }
 };
 
+
 export const getAllMarkers = async (req: Request, res: Response) => {
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = req.headers['accept-language'] || 'en'; // Determine the language from the request header
 
     try {
         const connection = await pool.getConnection();
         try {
             const userId = req.user?.id ?? null;
             const visibility = req.query.visibility as string;
+            const markerTypes = req.query.type; // Get marker types from query parameters
 
             if (!userId) {
                 return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
@@ -142,7 +144,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                 LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
                 WHERE 
             `;
-            let params: (number | null)[] = [];
+            let params: (number | string | null)[] = [];
 
             switch (visibility) {
                 case 'private':
@@ -174,8 +176,33 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                     params.push(userId, userId);
                     break;
 
+                case 'all':
+                    // 'All' visibility means no additional filter, allowing all records.
+                    query += `(m.visibility IN ('public', 'friends', 'private') OR 
+                               m.user_id = ? OR 
+                               m.user_id IN (
+                                  SELECT f.following_id 
+                                        FROM followings f 
+                                        WHERE f.user_id = ? AND f.status = 'accepted'
+                               )
+                              )`;
+                    params.push(userId, userId);
+                    break;
+
                 default:
                     return res.status(400).json({ status: 'error', message: getTranslation('INVALID_VISIBILITY_PARAMETER', language, 'controllers', 'markerController') });
+            }
+
+            // Add marker type filter if provided
+            if (markerTypes) {
+                // Ensure markerTypes is treated as an array of strings
+                const typesArray: string[] = Array.isArray(markerTypes)
+                    ? markerTypes.map(type => String(type))
+                    : [String(markerTypes)];
+                
+                const placeholders = typesArray.map(() => '?').join(', '); // Create placeholders for SQL query
+                query += ` AND m.type IN (${placeholders})`;
+                params.push(...typesArray);
             }
 
             query += ` GROUP BY m.id`;
