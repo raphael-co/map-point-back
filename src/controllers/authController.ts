@@ -87,7 +87,10 @@ export const registerController = async (req: Request, res: Response) => {
         connection.release();
 
         const userId = result.insertId;
-        const jwtToken = jwt.sign({ id: userId, email: emailAddresses }, SECRET_KEY);
+        const jwtToken = jwt.sign(
+            { id: userId, email: emailAddresses, role: 'user' },
+            SECRET_KEY
+        );
 
         res.status(201).json({ status: 'success', message: getTranslation('USER_REGISTERED_SUCCESSFULLY', language,'controllers','authController'), token: jwtToken });
     } catch (error) {
@@ -115,7 +118,8 @@ export const loginController = async (req: Request, res: Response) => {
             return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language,'controllers','authController') });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY);
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, SECRET_KEY);
+
         res.status(200).json({ status: 'success', token });
     } catch (error) {
         console.error(error);
@@ -169,7 +173,8 @@ export const googleAuthController = async (req: Request, res: Response) => {
         console.debug('User found or created:', user);
         connection.release();
 
-        const jwtToken = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY);
+        const jwtToken = jwt.sign({ id: user.id, email: user.email, role: user.role }, SECRET_KEY);
+
         console.debug('JWT token generated:', jwtToken);
         res.status(200).json({ status: 'success', token: jwtToken, user: { id: user.id, email: user.email, username: user.username, profilePicture: user.profile_image_url } });
     } catch (error) {

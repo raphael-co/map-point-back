@@ -100,13 +100,15 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return res.status(401).json({ status: 'error', message: getTranslation('TOKEN_MISSING', language, 'middlewares', 'authMiddleweares') });
     }
 
-    jwt.verify(token, SECRET_KEY, (err, user) => {
+    jwt.verify(token, SECRET_KEY, (err, decoded) => {
         if (err) {
             return res.status(403).json({ status: 'error', message: getTranslation('TOKEN_INVALID', language, 'middlewares', 'authMiddleweares') });
         }
 
-        if (typeof user !== 'string' && user?.id) {
-            req.user = { id: user.id, email: user.email };
+        const user = decoded as { id: number, email: string, role: string };
+
+        if (user?.id) {
+            req.user = { id: user.id, email: user.email, role: user.role };
         } else {
             req.user = undefined;
         }
@@ -140,3 +142,32 @@ export const validateResetPassword = (req: Request, res: Response, next: NextFun
 
     next();
 };
+
+
+export const authenticateTokenAdmin = (req: Request, res: Response, next: NextFunction) => {
+    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ status: 'error', message: getTranslation('TOKEN_MISSING', language, 'middlewares', 'authMiddleweares') });
+    }
+
+    jwt.verify(token, SECRET_KEY, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ status: 'error', message: getTranslation('TOKEN_INVALID', language, 'middlewares', 'authMiddleweares') });
+        }
+
+        const user = decoded as { id: number, email: string, role: string }; 
+
+        // Vérification que l'utilisateur est un admin
+        if (user?.role !== 'admin') {
+            return res.status(403).json({ status: 'error', message: getTranslation('UNAUTHORIZED', language, 'middlewares', 'authMiddleweares') });
+        }
+
+        // Si tout est correct, on passe l'utilisateur à req.user
+        req.user = { id: user.id, email: user.email, role: user.role };
+        
+        next();
+    });
+}

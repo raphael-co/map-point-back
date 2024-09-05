@@ -3,6 +3,7 @@ import { JwtPayload } from 'jsonwebtoken';
 interface UserPayload extends JwtPayload {
     id: number;
     email: string;
+    role: string;
 }
 
 declare global {

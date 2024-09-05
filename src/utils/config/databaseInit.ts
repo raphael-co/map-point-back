@@ -28,11 +28,13 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255),
     profile_image_url VARCHAR(255),
     gender ENUM('male', 'female', 'other'),
+    role ENUM('admin', 'user', 'moderator') DEFAULT 'user',  -- Nouvelle colonne pour le rôle
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     connection_type ENUM('mail', 'google', 'ios') NOT NULL
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createFollowersTable = `
 CREATE TABLE IF NOT EXISTS followers (
@@ -155,6 +157,48 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (sender_user_id) REFERENCES users(id)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
 
+const createAnnouncementsTable = `
+CREATE TABLE IF NOT EXISTS announcements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content LONGBLOB NOT NULL,  -- Stocke le fichier Markdown en BLOB
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    author_id INT NOT NULL,  -- L'utilisateur qui a créé l'annonce
+    FOREIGN KEY (author_id) REFERENCES users(id)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
+
+const addRoleColumnToUsersTable = async (): Promise<void> => {
+    const connection = await pool.getConnection();
+    try {
+        // Vérifier si la colonne 'role' existe déjà
+        const [rows] = await connection.query<RowDataPacket[]>(`
+            SELECT COLUMN_NAME 
+            FROM information_schema.columns 
+            WHERE table_name = 'users' 
+            AND column_name = 'role'
+        `);
+
+        if (rows.length === 0) {
+            // Ajouter la colonne 'role' si elle n'existe pas
+            await connection.query(`
+                ALTER TABLE users
+                ADD COLUMN role ENUM('admin', 'user', 'moderator') DEFAULT 'user'
+            `);
+            console.log("Column 'role' added to the 'users' table successfully.");
+        } else {
+            console.log("Column 'role' already exists in the 'users' table.");
+        }
+    } catch (error) {
+        console.error("Error adding 'role' column: ", error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+};
+
+
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     try {
@@ -170,10 +214,13 @@ export const initializeDatabase = async (): Promise<void> => {
         const ratingLabelsTableExists = await checkTableExists('RatingLabels');
         const markerRatingsTableExists = await checkTableExists('MarkerRatings');
         const notificationsTableExists = await checkTableExists('notifications');
+        const announcementsTableExists = await checkTableExists('announcements');
+
         if (!usersTableExists) {
             await connection.query(createUsersTable);
             console.log("Users table created successfully");
         } else {
+            // await addRoleColumnToUsersTable();
             console.log("Users table already exists");
         }
 
@@ -252,6 +299,12 @@ export const initializeDatabase = async (): Promise<void> => {
             console.log("Notifications table created successfully");
         } else {
             console.log("Notifications table already exists");
+        }
+        if (!announcementsTableExists) {
+            await connection.query(createAnnouncementsTable);
+            console.log("Announcements table created successfully");
+        } else {
+            console.log("Announcements table already exists");
         }
 
     } catch (error) {

@@ -1,0 +1,7 @@
+{
+    "FILE_UPLOAD_ERROR": "Erreur de téléchargement du fichier.",
+    "TITLE_REQUIRED": "Le titre est requis.",
+    "TITLE_TOO_LONG": "Le titre doit comporter 255 caractères ou moins.",
+    "CONTENT_REQUIRED": "Le contenu est requis.",
+    "CONTENT_EMPTY": "Le contenu ne peut pas être vide."
+}

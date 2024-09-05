@@ -1,0 +1,7 @@
+{
+    "FILE_UPLOAD_ERROR": "File upload error.",
+    "TITLE_REQUIRED": "Title is required.",
+    "TITLE_TOO_LONG": "Title must be 255 characters or less.",
+    "CONTENT_REQUIRED": "Content is required.",
+    "CONTENT_EMPTY": "Content cannot be empty."
+}

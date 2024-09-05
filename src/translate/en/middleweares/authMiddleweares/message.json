@@ -11,5 +11,6 @@
     "TOKEN_INVALID": "Invalid token",
     "RESET_PASSWORD_FIELDS_REQUIRED": "Code, password, and confirm password are required.",
     "PASSWORDS_DO_NOT_MATCH": "New password and confirm password do not match",
-    "PASSWORD_TOO_SHORT": "New password must be at least 8 characters long"
+    "PASSWORD_TOO_SHORT": "New password must be at least 8 characters long",
+    "UNAUTHORIZED": "Unauthorized"
 }
