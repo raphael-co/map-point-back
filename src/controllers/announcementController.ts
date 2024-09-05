@@ -40,7 +40,7 @@ export const getAnnouncements = async (req: Request, res: Response) => {
     try {
         const connection = await pool.getConnection();
         const [announcements] = await connection.query<RowDataPacket[]>(
-            'SELECT * FROM announcements ORDER BY created_at DESC'
+            'SELECT title,created_at FROM announcements ORDER BY created_at DESC'
         );
         connection.release();
 
