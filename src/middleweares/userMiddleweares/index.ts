@@ -20,7 +20,7 @@ export const validateEditeUser = (req: Request, res: Response, next: NextFunctio
         if (err) {
             return res.status(400).json({ 
                 status: 'error', 
-                message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'userMiddlewares') 
+                message: getTranslation('FILE_UPLOAD_ERROR', language, 'middleweares', 'userMiddlewares') 
             });
         }
 
@@ -29,7 +29,7 @@ export const validateEditeUser = (req: Request, res: Response, next: NextFunctio
         if (!username) {
             return res.status(400).json({ 
                 status: 'error', 
-                message: getTranslation('USERNAME_REQUIRED', language, 'middlewares', 'userMiddlewares') 
+                message: getTranslation('USERNAME_REQUIRED', language, 'middleweares', 'userMiddlewares') 
             });
         }
         
@@ -38,14 +38,14 @@ export const validateEditeUser = (req: Request, res: Response, next: NextFunctio
         if (username.length > 50) {
             return res.status(400).json({ 
                 status: 'error', 
-                message: getTranslation('USERNAME_TOO_LONG', language, 'middlewares', 'userMiddlewares') 
+                message: getTranslation('USERNAME_TOO_LONG', language, 'middleweares', 'userMiddlewares') 
             });
         }
 
         if (username.length < 4) {
             return res.status(400).json({ 
                 status: 'error', 
-                message: getTranslation('USERNAME_TOO_SHORT', language, 'middlewares', 'userMiddlewares') 
+                message: getTranslation('USERNAME_TOO_SHORT', language, 'middleweares', 'userMiddlewares') 
             });
         }
 
@@ -54,7 +54,7 @@ export const validateEditeUser = (req: Request, res: Response, next: NextFunctio
         if (!gender || !['male', 'female', 'other'].includes(gender)) {
             return res.status(400).json({ 
                 status: 'error', 
-                message: getTranslation('INVALID_GENDER', language, 'middlewares', 'userMiddlewares') 
+                message: getTranslation('INVALID_GENDER', language, 'middleweares', 'userMiddlewares') 
             });
         }
 
@@ -73,7 +73,7 @@ export const validateChangePassword = (req: Request, res: Response, next: NextFu
     if (!oldPassword || !newPassword || !confirmPassword) {
         return res.status(400).json({ 
             status: 'error', 
-            message: getTranslation('PASSWORD_FIELDS_REQUIRED', language, 'middlewares', 'userMiddlewares') 
+            message: getTranslation('PASSWORD_FIELDS_REQUIRED', language, 'middleweares', 'userMiddlewares') 
         });
     }
 
@@ -84,13 +84,13 @@ export const validateChangePassword = (req: Request, res: Response, next: NextFu
     if (newPassword !== confirmPassword) {
         return res.status(400).json({ 
             status: 'error', 
-            message: getTranslation('PASSWORD_MISMATCH', language, 'middlewares', 'userMiddlewares') 
+            message: getTranslation('PASSWORD_MISMATCH', language, 'middleweares', 'userMiddlewares') 
         });
     }
     if (newPassword.length < 8) {
         return res.status(400).json({ 
             status: 'error', 
-            message: getTranslation('PASSWORD_TOO_SHORT', language, 'middlewares', 'userMiddlewares') 
+            message: getTranslation('PASSWORD_TOO_SHORT', language, 'middleweares', 'userMiddlewares') 
         });
     }
 

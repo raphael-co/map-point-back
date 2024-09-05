@@ -13,7 +13,7 @@ export const validateAnnouncement = (req: Request, res: Response, next: NextFunc
         if (err) {
             return res.status(400).json({
                 status: 'error',
-                message: getTranslation('FILE_UPLOAD_ERROR', language, 'middlewares', 'announcementMiddleware')
+                message: getTranslation('FILE_UPLOAD_ERROR', language, 'middleweares', 'announcementMiddleware')
             });
         }
 
@@ -21,17 +21,17 @@ export const validateAnnouncement = (req: Request, res: Response, next: NextFunc
 
         // Vérification du titre
         if (!title) {
-            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_REQUIRED', language, 'middlewares', 'announcementMiddleware') });
+            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_REQUIRED', language, 'middleweares', 'announcementMiddleware') });
         }
 
         title = title.trim();
         if (title.length > 255) {
-            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middlewares', 'announcementMiddleware') });
+            return res.status(400).json({ status: 'error', message: getTranslation('TITLE_TOO_LONG', language, 'middleweares', 'announcementMiddleware') });
         }
 
         // Vérification du fichier Markdown
         if (!req.file) {
-            return res.status(400).json({ status: 'error', message: getTranslation('FILE_REQUIRED', language, 'middlewares', 'announcementMiddleware') });
+            return res.status(400).json({ status: 'error', message: getTranslation('FILE_REQUIRED', language, 'middleweares', 'announcementMiddleware') });
         }
         // Nettoyage des données
         req.body.title = title;
