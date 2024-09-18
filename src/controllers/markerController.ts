@@ -143,7 +143,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                     ) as images
                 FROM Markers m
                 LEFT JOIN MarkerImages mi ON m.id = mi.marker_id
-                WHERE 
+                WHERE m.blocked = FALSE AND
             `;
             let params: (number | string | null)[] = [];
 
@@ -180,7 +180,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                     break;
 
                 case 'all':
-                    // 'All' visibility means no additional filter, allowing all records.
                     query += `(m.visibility IN ('public', 'friends', 'private') OR 
                                m.user_id = ? OR 
                                m.user_id IN (
@@ -198,7 +197,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
 
             // Add marker type filter if provided
             if (markerTypes) {
-                // Ensure markerTypes is treated as an array of strings
                 const typesArray: string[] = Array.isArray(markerTypes)
                     ? markerTypes.map(type => String(type))
                     : [String(markerTypes)];
@@ -206,7 +204,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
                 const placeholders = typesArray.map(() => '?').join(', '); // Create placeholders for SQL query
                 query += ` AND m.type IN (${placeholders})`;
                 params.push(...typesArray);
-
             }
 
             query += ` GROUP BY m.id`;
@@ -250,7 +247,6 @@ export const getAllMarkers = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
-
 
 export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();

@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS Markers (
     longitude DECIMAL(9, 6) NOT NULL,
     visibility ENUM('private', 'friends', 'public') DEFAULT 'public',
     type ENUM('park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other') NOT NULL,
+    blocked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -199,6 +200,36 @@ const addRoleColumnToUsersTable = async (): Promise<void> => {
 };
 
 
+
+const addBlockedColumnToMarkersTable = async (): Promise<void> => {
+    const connection = await pool.getConnection();
+    try {
+        // Check if the 'blocked' column already exists
+        const [rows] = await connection.query<RowDataPacket[]>(`
+            SELECT COLUMN_NAME 
+            FROM information_schema.columns 
+            WHERE table_name = 'Markers' 
+            AND column_name = 'blocked'
+        `);
+
+        if (rows.length === 0) {
+            // If the 'blocked' column does not exist, add it to the table
+            await connection.query(`
+                ALTER TABLE Markers
+                ADD COLUMN blocked BOOLEAN DEFAULT FALSE
+            `);
+            console.log("Column 'blocked' added to the 'Markers' table successfully.");
+        } else {
+            console.log("Column 'blocked' already exists in the 'Markers' table.");
+        }
+    } catch (error) {
+        console.error("Error adding 'blocked' column to 'Markers' table: ", error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+};
+
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     try {
@@ -263,6 +294,7 @@ export const initializeDatabase = async (): Promise<void> => {
             await connection.query(createMarkersTable);
             console.log("Markers table created successfully");
         } else {
+            // await addBlockedColumnToMarkersTable()
             console.log("Markers table already exists");
         }
 
