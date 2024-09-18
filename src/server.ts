@@ -18,7 +18,7 @@ const port = 3000;
 // Configure CORS options
 const corsOptions = {
     origin: '*', // Allow all origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT','PATCH', 'OPTIONS', 'DELETE'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 };
