@@ -250,7 +250,7 @@ export const getAllMarkers = async (req: Request, res: Response) => {
 
 export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = req.headers['accept-language'] || 'en';
     try {
         const userId = req.user?.id ?? null;
 
@@ -260,7 +260,8 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
 
         const [markers] = await connection.query<RowDataPacket[]>(
             `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
-                    m.type, m.visibility, 
+                    m.type, m.visibility,
+                    m.blocked, 
                     IFNULL(
                         (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
                          FROM MarkerImages mi 
@@ -296,7 +297,7 @@ export const getAllMarkersUserConnect = async (req: Request, res: Response) => {
 
 export const getMarkersByUser = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
-    const language = req.headers['accept-language'] || 'en'; // Déterminer la langue à partir de l'en-tête de requête
+    const language = req.headers['accept-language'] || 'en'; // Determine the language from the request header
     try {
         const currentUserId = req.user?.id ?? null;
         const targetUserId = parseInt(req.params.userId, 10);
@@ -316,7 +317,7 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
         // Get markers along with the number of comments, average rating, and average comment rating using subqueries
         const [markers] = await connection.query<RowDataPacket[]>(
             `SELECT m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
-                    m.type, m.visibility, 
+                    m.type, m.visibility, m.blocked,
                     IFNULL(
                         (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
                          FROM MarkerImages mi 
@@ -327,7 +328,7 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
                     (SELECT IFNULL(AVG(mr.rating), 0) FROM MarkerRatings mr WHERE mr.marker_id = m.id) as average_rating,
                     (SELECT IFNULL(AVG(mc.rating), 0) FROM MarkerComments mc WHERE mc.marker_id = m.id) as average_comment_rating
                 FROM Markers m
-                WHERE m.user_id = ?
+                WHERE m.user_id = ? AND m.blocked = FALSE
                 AND (m.visibility = 'public' OR (m.visibility = 'friends' AND ?))`,
             [targetUserId, isFollower]
         );
@@ -337,7 +338,7 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
             images: JSON.parse(marker.images),
             comments_count: Number(marker.comments_count),
             average_rating: Number(marker.average_rating),
-            average_comment_rating: Number(marker.average_comment_rating), // New field for average comment rating
+            average_comment_rating: Number(marker.average_comment_rating),
         }));
 
         connection.release();
@@ -349,6 +350,7 @@ export const getMarkersByUser = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 };
+
 
 
 const getDistanceFromLatLonInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {

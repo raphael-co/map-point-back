@@ -109,3 +109,40 @@ export const getAllMarkersAdmin = async (req: Request, res: Response) => {
         res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
     }
 }
+
+export const updateMarkerBlockedStatus = async (req: Request, res: Response) => {
+    const connection = await pool.getConnection();
+    const markerId = req.body.markerId; // ID of the marker to update
+    const blockedStatus = req.body.blocked; // Expected to be 'true' or 'false'
+    const userRole = req.user?.role;
+
+    try {
+
+        if (!userRole || userRole !== 'admin') {
+            console.log('getAllMarkersAdmin - Unauthorized access attempt by non-admin');
+            return res.status(403).json({ status: 'error', message: 'Unauthorized access attempt by non-admin.'});
+        }
+        const [markerExists] = await connection.query<RowDataPacket[]>(
+            `SELECT id FROM Markers WHERE id = ?`,
+            [markerId]
+        );
+
+        if (markerExists.length === 0) {
+            connection.release();
+            return res.status(404).json({ status: 'error', message: 'Marker not found.' });
+        }
+
+        // Update the 'blocked' status of the marker
+        await connection.query(
+            `UPDATE Markers SET blocked = ? WHERE id = ?`,
+            [blockedStatus, markerId]
+        );
+
+        connection.release();
+        res.status(200).json({ status: 'success', message: 'Marker blocked status updated successfully.' });
+    } catch (error) {
+        connection.release();
+        console.error('Error updating marker blocked status:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error while updating marker status.' });
+    }
+};
