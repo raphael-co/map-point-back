@@ -101,7 +101,6 @@ export const validateCreateMarker = (req: Request, res: Response, next: NextFunc
 };
 
 export const validateUpdateMarker = (req: Request, res: Response, next: NextFunction) => {
-    console.log("Validating update marker middleware...");
     const language = getLanguageFromRequest(req);
     upload(req, res, (err) => {
         if (err) {
@@ -187,8 +186,6 @@ export const validateUpdateMarker = (req: Request, res: Response, next: NextFunc
         req.body.ratings = ratings;
         req.body.comment = comment;
         req.body.visibility = visibility;
-
-        console.log('End of markerMiddlewares');
         
         next();
     });
