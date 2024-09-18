@@ -36,7 +36,7 @@ const io = new SocketIOServer(server, {
     path: '/api/socket', // Set the path for Socket.IO
     cors: {
         origin: '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        methods: ['GET', 'POST', 'PUT','PATCH', 'OPTIONS', 'DELETE'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true
     }
