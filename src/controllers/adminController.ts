@@ -25,7 +25,7 @@ export const getAllMarkersAdmin = async (req: Request, res: Response) => {
             let query = `
                 SELECT 
                     m.id, m.user_id, m.title, m.description, m.latitude, m.longitude, 
-                    m.type, m.comment, m.visibility, 
+                    m.type, m.comment, m.visibility, m.blocked, 
                     IFNULL(
                         (SELECT JSON_ARRAYAGG(JSON_OBJECT('url', mi.image_url)) 
                          FROM MarkerImages mi 
