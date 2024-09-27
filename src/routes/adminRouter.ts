@@ -3,6 +3,7 @@ import { authenticateTokenAdmin } from '../middleweares/authMiddleweares';
 import { getAllMarkersAdmin, updateMarkerBlockedStatus, updateMarkerAdmin, getMarkersByIdAdmin } from '../controllers/adminController';
 import { validateUpdateMarkerAdmin } from '../middleweares/markerMiddlewares';
 import { getActiveUsersAdmin, getActiveUsersByMonthAndYear, getBlockedMarkersAdmin, getNewUsersAdmin, getNewUsersThisMonthAdmin, getNewUsersThisWeekAdmin, getTotalMarkersAdmin, getTotalUsersAdmin } from '../controllers/statsController';
+import { InserUserActif } from '../middleweares/usersActif/usersActif';
 
 const adminRouter = Router();
 
@@ -21,7 +22,7 @@ adminRouter.get('/stats/total-users', authenticateTokenAdmin, getTotalUsersAdmin
 // // Route pour obtenir le nombre de nouveaux utilisateurs ce mois-ci
 // adminRouter.get('/stats/new-users-month', authenticateTokenAdmin, getNewUsersThisMonthAdmin);
 
-adminRouter.get('/stats/new-users', authenticateTokenAdmin, getNewUsersAdmin);
+adminRouter.get('/stats/new-users', authenticateTokenAdmin,InserUserActif, getNewUsersAdmin);
 // Route pour obtenir le nombre total de marqueurs créés
 adminRouter.get('/stats/total-markers', authenticateTokenAdmin, getTotalMarkersAdmin);
 

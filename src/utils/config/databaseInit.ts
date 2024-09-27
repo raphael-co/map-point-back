@@ -199,7 +199,16 @@ const addRoleColumnToUsersTable = async (): Promise<void> => {
     }
 };
 
-
+const createActiveUsersTable = `
+CREATE TABLE IF NOT EXISTS ActiveUsers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    year INT NOT NULL,
+    month INT NOT NULL,
+    UNIQUE KEY unique_active_user (user_id, year, month),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const addBlockedColumnToMarkersTable = async (): Promise<void> => {
     const connection = await pool.getConnection();
@@ -230,15 +239,7 @@ const addBlockedColumnToMarkersTable = async (): Promise<void> => {
     }
 };
 
-const createActiveUsersTable = `
-CREATE TABLE IF NOT EXISTS ActiveUsers (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    year INT NOT NULL,
-    month INT NOT NULL,
-    active_users_count INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-`;
+
 
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
