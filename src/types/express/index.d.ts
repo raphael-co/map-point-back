@@ -10,6 +10,13 @@ declare global {
     namespace Express {
         interface Request {
             user?: UserPayload;
+            rateLimit?: {
+                resetTime?: Date;
+                remaining?: number;
+                limit: number,
+                used: number,
+              // Ajoutez d'autres propriétés si nécessaire
+            };
         }
     }
 }

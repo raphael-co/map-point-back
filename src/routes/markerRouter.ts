@@ -2,17 +2,18 @@ import { Router } from 'express';
 import { createMarker, deleteMarker, getAllMarkers, getAllMarkersUserConnect, getMarkersById, getMarkersByUser, updateMarker } from '../controllers/markerController';
 import { authenticateToken } from '../middleweares/authMiddleweares';
 import { validateCreateMarker, validateUpdateMarker } from '../middleweares/markerMiddlewares';
-import { addLabels ,getLabelsWithMarkerType} from '../controllers/labelController';
+import { addLabels, getLabelsWithMarkerType } from '../controllers/labelController';
+import { InserUserActif } from '../middleweares/usersActif/usersActif';
 
 const markerRouter = Router();
 
-markerRouter.post('/create', authenticateToken, validateCreateMarker, createMarker);
-markerRouter.get('/', authenticateToken, getAllMarkers);
-markerRouter.put('/update/:id', authenticateToken, validateUpdateMarker, updateMarker);
-markerRouter.get('/user', authenticateToken, getAllMarkersUserConnect);
-markerRouter.get('/user/:userId', authenticateToken, getMarkersByUser);
+markerRouter.post('/create', authenticateToken, InserUserActif, validateCreateMarker, createMarker);
+markerRouter.get('/', authenticateToken, InserUserActif, getAllMarkers);
+markerRouter.put('/update/:id', authenticateToken, InserUserActif, validateUpdateMarker, updateMarker);
+markerRouter.get('/user', authenticateToken, InserUserActif, getAllMarkersUserConnect);
+markerRouter.get('/user/:userId', authenticateToken, InserUserActif, getMarkersByUser);
 
-markerRouter.get('/:id', authenticateToken,getMarkersById);
+markerRouter.get('/:id', authenticateToken, getMarkersById);
 
 
 // Route pour ajouter plusieurs labels à un type de marqueur

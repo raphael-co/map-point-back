@@ -7,6 +7,8 @@ import { initializeDatabase } from './utils/config/databaseInit';
 import { setSocketServer } from './controllers/setSocketServer';
 import jwt, { JwtPayload } from 'jsonwebtoken'; // Importation de JwtPayload pour les types
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+
 
 dotenv.config();
 
@@ -18,11 +20,25 @@ const port = 3000;
 // Configure CORS options
 const corsOptions = {
     origin: '*', // Allow all origins
-    methods: ['GET', 'POST', 'PUT','PATCH', 'OPTIONS', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS', 'DELETE'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 };
 
+const limiter = rateLimit({
+    windowMs: 10 * 1000, 
+    max: 100,
+    handler: (req , res, next) => {
+        const resetTime = req.rateLimit && req.rateLimit.resetTime ? req.rateLimit.resetTime.getTime() : Date.now();
+        res.status(429).json({
+            success: false,
+            message: 'Trop de requêtes, veuillez réessayer plus tard.',
+            code: 429,
+            retryAfter: `${Math.ceil((resetTime - Date.now()) / 1000)} seconds`
+        });
+    }
+});
+app.use(limiter);
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50gb' }));
 app.use(express.urlencoded({ extended: true, limit: '10gb' }));
@@ -36,7 +52,7 @@ const io = new SocketIOServer(server, {
     path: '/api/socket', // Set the path for Socket.IO
     cors: {
         origin: '*',
-        methods: ['GET', 'POST', 'PUT','PATCH', 'OPTIONS', 'DELETE'],
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS', 'DELETE'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true
     }
@@ -55,7 +71,7 @@ io.on('connection', (socket) => {
     if (token && typeof token === 'string' && SECRET_KEY) {
         try {
             // Vérifier et décoder le token
-            const decoded = jwt.verify(token, SECRET_KEY); 
+            const decoded = jwt.verify(token, SECRET_KEY);
 
             // Assurez-vous que le token contient l'ID utilisateur et est de type JwtPayload
             if (typeof decoded !== 'string' && 'id' in decoded) {

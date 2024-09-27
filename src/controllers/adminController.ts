@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import getTranslation from '../utils/translate';  // Fonction de traduction
 import cloudinary from 'cloudinary';
 import dotenv from 'dotenv';
+import { getDistanceFromLatLonInMeters } from './markerController';
 
 dotenv.config();
 
@@ -179,6 +180,8 @@ export const updateMarkerAdmin = async (req: Request, res: Response) => {
             return res.status(404).json({ status: 'error', message: getTranslation('MARKER_NOT_FOUND_UNAUTHORIZED_ACCESS', language, 'controllers', 'markerController') });
         }
 
+        const previousType = existingMarker[0].type;
+
         // Update the marker's details
         await connection.query(
             `UPDATE Markers SET title = ?, description = ?, type = ?, visibility = ?, comment = ? WHERE id = ?`,
@@ -187,29 +190,20 @@ export const updateMarkerAdmin = async (req: Request, res: Response) => {
 
         // Handle ratings update
         if (typeof ratings === 'object' && ratings !== null) {
-            for (const label in ratings) {
-                if (Object.prototype.hasOwnProperty.call(ratings, label)) {
-                    const decodedLabel = decodeURIComponent(label);
-                    const rating = Number(ratings[decodedLabel]);
-                    if (!isNaN(rating)) {
-                        const [labelResult] = await connection.query<RowDataPacket[]>('SELECT id FROM RatingLabels WHERE marker_type = ? AND label = ?', [type, decodedLabel]);
-                        if (labelResult.length > 0) {
-                            const labelId = labelResult[0].id;
 
-                            // Check if the rating already exists for this marker and label
-                            const [existingRating] = await connection.query<RowDataPacket[]>(
-                                'SELECT * FROM MarkerRatings WHERE marker_id = ? AND label_id = ?',
-                                [id, labelId]
-                            );
+            // Si le type change, supprimer les anciens ratings
+            if (previousType !== type) {
+                await connection.query(`DELETE FROM MarkerRatings WHERE marker_id = ?`, [id]);
 
-                            if (existingRating.length > 0) {
-                                // Update the existing rating
-                                await connection.query(
-                                    'UPDATE MarkerRatings SET rating = ? WHERE marker_id = ? AND label_id = ?',
-                                    [rating, id, labelId]
-                                );
-                            } else {
-                                // Insert new rating
+                // Insérer les nouveaux ratings
+                for (const label in ratings) {
+                    if (Object.prototype.hasOwnProperty.call(ratings, label)) {
+                        const decodedLabel = decodeURIComponent(label);
+                        const rating = Number(ratings[decodedLabel]);
+                        if (!isNaN(rating)) {
+                            const [labelResult] = await connection.query<RowDataPacket[]>('SELECT id FROM RatingLabels WHERE marker_type = ? AND label = ?', [type, decodedLabel]);
+                            if (labelResult.length > 0) {
+                                const labelId = labelResult[0].id;
                                 await connection.query(
                                     'INSERT INTO MarkerRatings (marker_id, label_id, rating) VALUES (?, ?, ?)',
                                     [id, labelId, rating]
@@ -218,20 +212,60 @@ export const updateMarkerAdmin = async (req: Request, res: Response) => {
                         }
                     }
                 }
+            } else {
+                // Si le type ne change pas, mettre à jour les ratings existants ou insérer les nouveaux
+                for (const label in ratings) {
+                    if (Object.prototype.hasOwnProperty.call(ratings, label)) {
+                        const decodedLabel = decodeURIComponent(label);
+                        const rating = Number(ratings[decodedLabel]);
+                        
+                        if (!isNaN(rating)) {
+                            const [labelResult] = await connection.query<RowDataPacket[]>('SELECT id FROM RatingLabels WHERE marker_type = ? AND label = ?', [type, decodedLabel]);
+                            
+                            if (labelResult.length > 0) {
+                                const labelId = labelResult[0].id;
+
+                                // Check if the rating already exists for this marker and label
+                                const [existingRating] = await connection.query<RowDataPacket[]>(
+                                    'SELECT * FROM MarkerRatings WHERE marker_id = ? AND label_id = ?',
+                                    [id, labelId]
+                                );
+
+                                if (existingRating.length > 0) {
+                                    // Update the existing rating
+                                    await connection.query(
+                                        'UPDATE MarkerRatings SET rating = ? WHERE marker_id = ? AND label_id = ?',
+                                        [rating, id, labelId]
+                                    );
+                                } else {
+                                    // Insert new rating if not exists
+                                    await connection.query(
+                                        'INSERT INTO MarkerRatings (marker_id, label_id, rating) VALUES (?, ?, ?)',
+                                        [id, labelId, rating]
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
+
         const markerLat = existingMarker[0].latitude;
         const markerLon = existingMarker[0].longitude;
 
-
         // Handle image updates
+        console.log(files);
+
         if (files && files.length > 0) {
+
+            console.log(files);
+            
             // Fetch current images
             const [currentImages] = await connection.query<RowDataPacket[]>(
                 `SELECT id, image_url FROM MarkerImages WHERE marker_id = ?`,
                 [id]
             );
-
 
             const currentImageUrls = currentImages.map(image => image.image_url);
 
@@ -240,11 +274,11 @@ export const updateMarkerAdmin = async (req: Request, res: Response) => {
                 const existingFile = currentImageUrls.find(url => url.includes(file.originalname));
                 if (!existingFile) {
                     if (latitude && longitude) {
-                        console.log(existingFile);
-
-                        console.log('latitude:', latitude, 'longitude:', longitude);
-                        console.log('markerLat:', markerLat, 'markerLon:', markerLon);
-
+                        const distance = getDistanceFromLatLonInMeters(latitude, longitude, markerLat, markerLon);
+                        if (distance > 30) {
+                            connection.release();
+                            return res.status(403).json({ status: 'error', message: getTranslation('TOO_FAR_TO_UPDATE_IMAGES', language, 'controllers', 'markerController') });
+                        }
                     } else {
                         connection.release();
                         return res.status(400).json({ status: 'error', message: getTranslation('USER_LOCATION_REQUIRED', language, 'controllers', 'markerController') });
@@ -286,13 +320,12 @@ export const updateMarkerAdmin = async (req: Request, res: Response) => {
 
         connection.release();
         // io.emit('markersUpdated');
-        res.status(200).json({ status: 'success', message: getTranslation('MARKER_UPDATED_SUCCESS', language, 'controllers', 'markerController') });
+        res.status(200).json({ status: 'success', message: 'MARKER_UPDATED_SUCCESS' });
     } catch (error) {
         console.error('Error updating marker:', error);
-        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'markerController') });
+        res.status(500).json({ status: 'error', message: 'INTERNAL_SERVER_ERROR' });
     }
 };
-
 
 
 export const getMarkersByIdAdmin = async (req: Request, res: Response) => {

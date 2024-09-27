@@ -230,6 +230,16 @@ const addBlockedColumnToMarkersTable = async (): Promise<void> => {
     }
 };
 
+const createActiveUsersTable = `
+CREATE TABLE IF NOT EXISTS ActiveUsers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT NOT NULL,
+    month INT NOT NULL,
+    active_users_count INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
+
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     try {
@@ -246,7 +256,7 @@ export const initializeDatabase = async (): Promise<void> => {
         const markerRatingsTableExists = await checkTableExists('MarkerRatings');
         const notificationsTableExists = await checkTableExists('notifications');
         const announcementsTableExists = await checkTableExists('announcements');
-
+        const activeUsersTableExists = await checkTableExists('ActiveUsers');
         if (!usersTableExists) {
             await connection.query(createUsersTable);
             console.log("Users table created successfully");
@@ -339,6 +349,14 @@ export const initializeDatabase = async (): Promise<void> => {
             console.log("Announcements table already exists");
         }
 
+        if (!activeUsersTableExists) {
+            await connection.query(createActiveUsersTable);
+            console.log("ActiveUsers table created successfully");
+        } else {
+            console.log("ActiveUsers table already exists");
+        }
+
+        console.log("Database initialized successfully");
     } catch (error) {
         console.error("Error initializing database: ", error);
     } finally {
