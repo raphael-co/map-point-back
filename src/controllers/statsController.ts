@@ -57,70 +57,6 @@ export const getNewUsersThisWeekAdmin = async (req: Request, res: Response) => {
     }
 };
 
-// Fonction pour obtenir le nombre de nouveaux utilisateurs ce mois-ci
-export const getNewUsersThisMonthAdmin = async (req: Request, res: Response) => {
-    const connection = await pool.getConnection();
-    try {
-        const [newUsersThisMonth] = await connection.query<RowDataPacket[]>(`
-            SELECT COUNT(*) AS total FROM users 
-            WHERE joined_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH);
-        `);
-
-        if (newUsersThisMonth.length > 0) {
-            res.json({ newUsersThisMonth: newUsersThisMonth[0].total });
-        } else {
-            res.json({ newUsersThisMonth: 0 });
-        }
-    } catch (error) {
-        console.error("Error fetching new users this month: ", error);
-        res.status(500).send('Server error');
-    } finally {
-        connection.release();
-    }
-};
-
-// Fonction pour obtenir le nombre total de marqueurs créés
-export const getTotalMarkersAdmin = async (req: Request, res: Response) => {
-    const connection = await pool.getConnection();
-    try {
-        const [totalMarkers] = await connection.query<RowDataPacket[]>(`
-            SELECT COUNT(*) AS total FROM Markers;
-        `);
-
-        if (totalMarkers.length > 0) {
-            res.json({ totalMarkers: totalMarkers[0].total });
-        } else {
-            res.json({ totalMarkers: 0 });
-        }
-    } catch (error) {
-        console.error("Error fetching total markers: ", error);
-        res.status(500).send('Server error');
-    } finally {
-        connection.release();
-    }
-};
-
-// Fonction pour obtenir le nombre de marqueurs bloqués
-export const getBlockedMarkersAdmin = async (req: Request, res: Response) => {
-    const connection = await pool.getConnection();
-    try {
-        const [blockedMarkers] = await connection.query<RowDataPacket[]>(`
-            SELECT COUNT(*) AS total FROM Markers WHERE blocked = TRUE;
-        `);
-
-        if (blockedMarkers.length > 0) {
-            res.json({ blockedMarkers: blockedMarkers[0].total });
-        } else {
-            res.json({ blockedMarkers: 0 });
-        }
-    } catch (error) {
-        console.error("Error fetching blocked markers: ", error);
-        res.status(500).send('Server error');
-    } finally {
-        connection.release();
-    }
-};
-
 // Fonction pour obtenir le nombre d'utilisateurs actifs (dernière connexion dans le dernier mois)
 export const getActiveUsersAdmin = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
@@ -261,16 +197,16 @@ export const getNewUsersAdmin = async (req: Request, res: Response) => {
                 GROUP BY HOUR(joined_at)
                 ORDER BY HOUR(joined_at);
             `;
-            
+
             // Construire la date à partir des paramètres year, month et day
             const dateParam = `${yearParam}-${monthParam.toString().padStart(2, '0')}-${dayParam.toString().padStart(2, '0')}`;
             params = [dateParam];
-        
+
             const [rows] = await connection.query<RowDataPacket[]>(query, params);
-        
+
             // Créer un tableau avec toutes les heures de 00 à 23
             const fullHours = Array.from({ length: 24 }, (_, i) => i); // [0, 1, 2, ..., 23]
-        
+
             // Mappez les données existantes ou assignez 0 pour les heures manquantes
             result[dateParam] = fullHours.map((hour) => {
                 const foundHour = rows.find((row: any) => row.label === hour);
@@ -280,7 +216,7 @@ export const getNewUsersAdmin = async (req: Request, res: Response) => {
                 };
             });
         }
-        
+
         else {
             // Cas par défaut : Utilisateurs par jour de la semaine glissante
             query = `
@@ -314,6 +250,7 @@ export const getNewUsersAdmin = async (req: Request, res: Response) => {
     }
 };
 
+
 export const getActiveUsersByMonthAndYear = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
     try {
@@ -321,9 +258,8 @@ export const getActiveUsersByMonthAndYear = async (req: Request, res: Response) 
 
         // Récupérer la liste des années où il y a des utilisateurs actifs
         const [years] = await connection.query<RowDataPacket[]>(`
-            SELECT DISTINCT YEAR(last_login) AS year 
-            FROM users 
-            WHERE last_login IS NOT NULL
+            SELECT DISTINCT year 
+            FROM ActiveUsers
             ORDER BY year DESC;
         `);
 
@@ -331,20 +267,19 @@ export const getActiveUsersByMonthAndYear = async (req: Request, res: Response) 
         for (const { year } of years) {
             // Récupérer les utilisateurs actifs par mois pour chaque année
             const [monthlyData] = await connection.query<RowDataPacket[]>(`
-                SELECT MONTHNAME(last_login) AS label, COUNT(*) AS value 
-                FROM users 
-                WHERE YEAR(last_login) = ? 
-                AND last_login IS NOT NULL
-                GROUP BY MONTH(last_login)
-                ORDER BY MONTH(last_login);
+                SELECT month AS monthNumber, COUNT(*) AS value 
+                FROM ActiveUsers 
+                WHERE year = ?
+                GROUP BY month
+                ORDER BY month;
             `, [year]);
 
             // Créer un tableau avec tous les mois de l'année
             const fullMonths = Array.from({ length: 12 }, (_, i) => format(new Date(2021, i, 1), 'MMMM'));
 
             // Ajouter les données pour chaque mois, compléter les mois manquants avec 0
-            result[year] = fullMonths.map((monthName) => {
-                const foundMonth = monthlyData.find((row: any) => row.label === monthName);
+            result[year] = fullMonths.map((monthName, index) => {
+                const foundMonth = monthlyData.find((row: any) => row.monthNumber === index + 1); // index + 1 pour correspondre aux mois (1-12)
                 return {
                     label: monthName,
                     value: foundMonth ? foundMonth.value : 0
@@ -360,6 +295,7 @@ export const getActiveUsersByMonthAndYear = async (req: Request, res: Response) 
         connection.release();
     }
 };
+
 
 
 
