@@ -5,14 +5,25 @@ import { validateUpdateMarkerAdmin } from "../middleweares/markerMiddlewares";
 import { getActiveUsersAdmin, getActiveUsersByMonthAndYear, getNewUsersAdmin, getTotalUsersAdmin } from "../controllers/statsController";
 import { InserUserActif } from "../middleweares/usersActif/usersActif";
 import { getBlockedMarkersAdmin, getCommentsByMonthAndYear, getCommentsByPeriod, getMarkersByMonthAndYear, getMarkersByPeriod, getTotalMarkersAdmin } from "../controllers/statMarkersController";
+import { deleteUserAdmin, getAllUsersAdmin, getUserByIdAdmin, updateUserBlockedStatusAdmin, updateUserRoleAdmin } from "../controllers/adminUsersController";
+import { deleteMarkerAdmin, getAllMarkersPaginationAdmin } from "../controllers/adminMarkersController";
 
 const adminRouter = Router();
 
 // Routes pour les marqueurs
 adminRouter.get('/markers', authenticateTokenAdmin, getAllMarkersAdmin);
+adminRouter.get('/tabs/markers', authenticateTokenAdmin, getAllMarkersPaginationAdmin);
 adminRouter.patch('/markers/blocked', authenticateTokenAdmin, updateMarkerBlockedStatus);
 adminRouter.put('/update/:id', authenticateTokenAdmin, validateUpdateMarkerAdmin, updateMarkerAdmin);
 adminRouter.get('/markers/:id', authenticateTokenAdmin, getMarkersByIdAdmin);
+adminRouter.delete('/markers/:id', authenticateTokenAdmin, deleteMarkerAdmin);
+
+// Routes pour les utilisateurs
+adminRouter.get('/users', authenticateTokenAdmin, getAllUsersAdmin);
+adminRouter.get('/users/:id', authenticateTokenAdmin, getUserByIdAdmin);
+adminRouter.patch('/users/:id/role', authenticateTokenAdmin, updateUserRoleAdmin);
+adminRouter.patch('/users/:id/blocked', authenticateTokenAdmin, updateUserBlockedStatusAdmin);
+adminRouter.delete('/users/:id', authenticateTokenAdmin, deleteUserAdmin);
 
 // Routes pour les statistiques des utilisateurs
 adminRouter.get('/stats/total-users', authenticateTokenAdmin, getTotalUsersAdmin);
@@ -22,6 +33,7 @@ adminRouter.get('/stats/active-users-all', authenticateTokenAdmin, getActiveUser
 
 // Routes pour les statistiques des marqueurs
 adminRouter.get('/stats/total-markers', authenticateTokenAdmin, getTotalMarkersAdmin);
+
 adminRouter.get('/stats/blocked-markers', authenticateTokenAdmin, getBlockedMarkersAdmin);
 
 // Nouvelles routes pour les statistiques des marqueurs par mois, année, jour ou période

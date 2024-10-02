@@ -70,19 +70,27 @@ export const getBlockedMarkersAdmin = async (req: Request, res: Response) => {
 // Fonction pour obtenir les marqueurs créés par mois et année
 export const getMarkersByMonthAndYear = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
+    const { year: queryYear } = req.query; // Récupérer le paramètre "year" s'il est fourni
+
     try {
         const result: { [key: string]: { label: string, value: number }[] } = {};
+        let years;
 
-        // Récupérer la liste des années où il y a des marqueurs créés
-        const [years] = await connection.query<RowDataPacket[]>(`
-            SELECT DISTINCT YEAR(created_at) AS year 
-            FROM Markers
-            ORDER BY year DESC;
-        `);
+        // Vérifier si un paramètre d'année est fourni
+        if (queryYear) {
+            years = [{ year: parseInt(queryYear as string, 10) }];
+        } else {
+            // Récupérer la liste des années où il y a des marqueurs créés
+            [years] = await connection.query<RowDataPacket[]>(`
+                SELECT DISTINCT YEAR(created_at) AS year 
+                FROM Markers
+                ORDER BY year DESC;
+            `);
+        }
 
         // Parcourir chaque année et récupérer les données de marqueurs par mois
         for (const { year } of years) {
-            // Récupérer les marqueurs créés par mois pour chaque année
+            // Récupérer les marqueurs créés par mois pour chaque année ou année spécifiée
             const [monthlyData] = await connection.query<RowDataPacket[]>(`
                 SELECT MONTH(created_at) AS monthNumber, COUNT(*) AS value 
                 FROM Markers 
@@ -112,6 +120,7 @@ export const getMarkersByMonthAndYear = async (req: Request, res: Response) => {
         connection.release();
     }
 };
+
 
 // Fonction pour obtenir les marqueurs par jour, mois ou semaine en fonction de la période
 export const getMarkersByPeriod = async (req: Request, res: Response) => {
@@ -177,6 +186,39 @@ export const getMarkersByPeriod = async (req: Request, res: Response) => {
                     value: foundDay ? foundDay.value : 0
                 };
             });
+        } else if (period === 'week' && yearParam !== undefined && monthParam !== undefined && dayParam !== undefined) {
+            // Récupérer les marqueurs par jour de la semaine pour une semaine donnée
+            query = `
+                SELECT WEEKDAY(created_at) AS label, COUNT(*) AS value 
+                FROM Markers 
+                WHERE YEAR(created_at) = ? 
+                  AND MONTH(created_at) = ? 
+                  AND WEEK(created_at, 3) = WEEK(DATE(?), 3)
+                GROUP BY WEEKDAY(created_at)
+                ORDER BY WEEKDAY(created_at);
+            `;
+            const dateParam = `${yearParam}-${monthParam.toString().padStart(2, '0')}-${dayParam.toString().padStart(2, '0')}`;
+            params = [yearParam, monthParam, dateParam];
+
+            const [rows] = await connection.query<RowDataPacket[]>(query, params);
+
+            const targetDate = new Date(yearParam, monthParam - 1, dayParam);
+            const weekStartDate = startOfWeek(targetDate, { weekStartsOn: 1 });
+
+            const fullWeekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const monthName = format(weekStartDate, 'MMMM');
+            const resultKey = `${yearParam}-${monthName}`;
+
+            result[resultKey] = fullWeekDays.map((day, index) => {
+                const foundDay = rows.find((row: any) => row.label === index);
+                const dayDate = addDays(weekStartDate, index);
+                const formattedDate = format(dayDate, 'yyyy-MM-dd');
+
+                return {
+                    label: `${day} (${formattedDate})`,
+                    value: foundDay ? foundDay.value : 0
+                };
+            });
         } else if (period === 'day' && yearParam !== undefined && monthParam !== undefined && dayParam !== undefined) {
             // Récupérer les marqueurs par heure pour un jour donné
             query = `
@@ -211,22 +253,31 @@ export const getMarkersByPeriod = async (req: Request, res: Response) => {
     }
 };
 
+
 // Fonction pour obtenir les commentaires créés par mois et année
 export const getCommentsByMonthAndYear = async (req: Request, res: Response) => {
     const connection = await pool.getConnection();
+    const { year: queryYear } = req.query; // Récupérer le paramètre "year" s'il est fourni
+
     try {
         const result: { [key: string]: { label: string, value: number }[] } = {};
+        let years;
 
-        // Récupérer la liste des années où il y a des commentaires créés
-        const [years] = await connection.query<RowDataPacket[]>(`
-            SELECT DISTINCT YEAR(created_at) AS year 
-            FROM MarkerComments
-            ORDER BY year DESC;
-        `);
+        // Vérifier si un paramètre d'année est fourni
+        if (queryYear) {
+            years = [{ year: parseInt(queryYear as string, 10) }];
+        } else {
+            // Récupérer la liste des années où il y a des commentaires créés
+            [years] = await connection.query<RowDataPacket[]>(`
+                SELECT DISTINCT YEAR(created_at) AS year 
+                FROM MarkerComments
+                ORDER BY year DESC;
+            `);
+        }
 
         // Parcourir chaque année et récupérer les données de commentaires par mois
         for (const { year } of years) {
-            // Récupérer les commentaires créés par mois pour chaque année
+            // Récupérer les commentaires créés par mois pour chaque année ou année spécifiée
             const [monthlyData] = await connection.query<RowDataPacket[]>(`
                 SELECT MONTH(created_at) AS monthNumber, COUNT(*) AS value 
                 FROM MarkerComments 
@@ -256,6 +307,7 @@ export const getCommentsByMonthAndYear = async (req: Request, res: Response) => 
         connection.release();
     }
 };
+
 
 // Fonction pour obtenir les commentaires par jour, mois ou semaine en fonction de la période
 export const getCommentsByPeriod = async (req: Request, res: Response) => {

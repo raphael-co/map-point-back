@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255),
     profile_image_url VARCHAR(255),
     gender ENUM('male', 'female', 'other'),
-    role ENUM('admin', 'user', 'moderator') DEFAULT 'user',  -- Nouvelle colonne pour le rôle
+    role ENUM('admin', 'user', 'moderator') DEFAULT 'user',
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -43,9 +43,10 @@ CREATE TABLE IF NOT EXISTS followers (
     followed_at TIMESTAMP NULL,
     status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
     PRIMARY KEY (user_id, follower_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (follower_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createFollowingsTable = `
 CREATE TABLE IF NOT EXISTS followings (
@@ -54,16 +55,18 @@ CREATE TABLE IF NOT EXISTS followings (
     following_at TIMESTAMP NULL,
     status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
     PRIMARY KEY (user_id, following_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (following_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createPushTokensTable = `
 CREATE TABLE IF NOT EXISTS PushTokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createUserPushTokensTable = `
 CREATE TABLE IF NOT EXISTS UserPushTokens (
@@ -71,9 +74,10 @@ CREATE TABLE IF NOT EXISTS UserPushTokens (
     push_token_id INT NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     PRIMARY KEY (user_id, push_token_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (push_token_id) REFERENCES PushTokens(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (push_token_id) REFERENCES PushTokens(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createPasswordResetTokensTable = `
 CREATE TABLE IF NOT EXISTS PasswordResetTokens (
@@ -82,8 +86,9 @@ CREATE TABLE IF NOT EXISTS PasswordResetTokens (
     token VARCHAR(8) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createMarkersTable = `
 CREATE TABLE IF NOT EXISTS Markers (
@@ -98,8 +103,9 @@ CREATE TABLE IF NOT EXISTS Markers (
     blocked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createMarkerImagesTable = `
 CREATE TABLE IF NOT EXISTS MarkerImages (
@@ -108,9 +114,10 @@ CREATE TABLE IF NOT EXISTS MarkerImages (
     user_id INT NOT NULL,
     image_url VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (marker_id) REFERENCES Markers(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (marker_id) REFERENCES Markers(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createMarkerCommentsTable = `
 CREATE TABLE IF NOT EXISTS MarkerComments (
@@ -120,19 +127,19 @@ CREATE TABLE IF NOT EXISTS MarkerComments (
     comment TEXT NOT NULL,
     rating TINYINT(1) NOT NULL DEFAULT 3,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (marker_id) REFERENCES Markers(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`;
+    FOREIGN KEY (marker_id) REFERENCES Markers(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
-// New table to store rating labels for each marker type
 const createRatingLabelsTable = `
 CREATE TABLE IF NOT EXISTS RatingLabels (
     id INT AUTO_INCREMENT PRIMARY KEY,
     marker_type ENUM('park', 'restaurant', 'bar', 'cafe', 'museum', 'monument', 'store', 'hotel', 'beach', 'other') NOT NULL,
     label VARCHAR(255) NOT NULL
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
-// Updated MarkerRatings table to include label references
 const createMarkerRatingsTable = `
 CREATE TABLE IF NOT EXISTS MarkerRatings (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -140,64 +147,37 @@ CREATE TABLE IF NOT EXISTS MarkerRatings (
     label_id INT NOT NULL,
     rating TINYINT(1) NOT NULL CHECK (rating BETWEEN 1 AND 5),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (marker_id) REFERENCES Markers(id),
-    FOREIGN KEY (label_id) REFERENCES RatingLabels(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    FOREIGN KEY (marker_id) REFERENCES Markers(id) ON DELETE CASCADE,
+    FOREIGN KEY (label_id) REFERENCES RatingLabels(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createNotificationsTable = `
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    receiver_user_id INT NOT NULL,  -- Utilisateur qui reçoit la notification
-    sender_user_id INT NOT NULL,    -- Utilisateur qui envoie la notification
+    receiver_user_id INT NOT NULL,
+    sender_user_id INT NOT NULL,
     type ENUM('follow', 'following','like', 'comment', 'mention', 'marker', 'other') NOT NULL,
     content TEXT,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    event_id INT NULL, -- Identifiant de l'événement correspondant à la notification
-    FOREIGN KEY (receiver_user_id) REFERENCES users(id),
-    FOREIGN KEY (sender_user_id) REFERENCES users(id)
-) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    event_id INT NULL,
+    FOREIGN KEY (receiver_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
 
 const createAnnouncementsTable = `
 CREATE TABLE IF NOT EXISTS announcements (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    content LONGBLOB NOT NULL,  -- Stocke le fichier Markdown en BLOB
+    content LONGBLOB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    author_id INT NOT NULL,  -- L'utilisateur qui a créé l'annonce
-    FOREIGN KEY (author_id) REFERENCES users(id)
+    author_id INT NOT NULL,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
-
-const addRoleColumnToUsersTable = async (): Promise<void> => {
-    const connection = await pool.getConnection();
-    try {
-        // Vérifier si la colonne 'role' existe déjà
-        const [rows] = await connection.query<RowDataPacket[]>(`
-            SELECT COLUMN_NAME 
-            FROM information_schema.columns 
-            WHERE table_name = 'users' 
-            AND column_name = 'role'
-        `);
-
-        if (rows.length === 0) {
-            // Ajouter la colonne 'role' si elle n'existe pas
-            await connection.query(`
-                ALTER TABLE users
-                ADD COLUMN role ENUM('admin', 'user', 'moderator') DEFAULT 'user'
-            `);
-            console.log("Column 'role' added to the 'users' table successfully.");
-        } else {
-            console.log("Column 'role' already exists in the 'users' table.");
-        }
-    } catch (error) {
-        console.error("Error adding 'role' column: ", error);
-        throw error;
-    } finally {
-        connection.release();
-    }
-};
 
 const createActiveUsersTable = `
 CREATE TABLE IF NOT EXISTS ActiveUsers (
@@ -206,41 +186,104 @@ CREATE TABLE IF NOT EXISTS ActiveUsers (
     year INT NOT NULL,
     month INT NOT NULL,
     UNIQUE KEY unique_active_user (user_id, year, month),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
 
-const addBlockedColumnToMarkersTable = async (): Promise<void> => {
+const updateForeignKeyWithCascade = async (tableName: string, columnName: string, referencedTable: string, referencedColumn: string): Promise<void> => {
     const connection = await pool.getConnection();
     try {
-        // Check if the 'blocked' column already exists
-        const [rows] = await connection.query<RowDataPacket[]>(`
-            SELECT COLUMN_NAME 
-            FROM information_schema.columns 
-            WHERE table_name = 'Markers' 
-            AND column_name = 'blocked'
-        `);
+        // Récupérer la contrainte FOREIGN KEY existante pour la colonne
+        const [existingForeignKey] = await connection.query<RowDataPacket[]>(`
+            SELECT CONSTRAINT_NAME 
+            FROM information_schema.key_column_usage 
+            WHERE table_schema = DATABASE() 
+            AND table_name = ? 
+            AND column_name = ? 
+            AND referenced_table_name IS NOT NULL;
+        `, [tableName, columnName]);
 
-        if (rows.length === 0) {
-            // If the 'blocked' column does not exist, add it to the table
+        if (existingForeignKey.length > 0) {
+            const constraintName = existingForeignKey[0].CONSTRAINT_NAME;
+
+            // Supprimer la clé étrangère existante
             await connection.query(`
-                ALTER TABLE Markers
-                ADD COLUMN blocked BOOLEAN DEFAULT FALSE
+                ALTER TABLE ${tableName} DROP FOREIGN KEY ${constraintName};
             `);
-            console.log("Column 'blocked' added to the 'Markers' table successfully.");
+            console.log(`Foreign key '${constraintName}' on column '${columnName}' in table '${tableName}' has been dropped.`);
+
+            // Recréer la clé étrangère avec ON DELETE CASCADE
+            await connection.query(`
+                ALTER TABLE ${tableName}
+                ADD CONSTRAINT fk_${tableName}_${columnName}
+                FOREIGN KEY (${columnName}) REFERENCES ${referencedTable}(${referencedColumn}) ON DELETE CASCADE;
+            `);
+            console.log(`Foreign key on column '${columnName}' in table '${tableName}' has been added with ON DELETE CASCADE.`);
         } else {
-            console.log("Column 'blocked' already exists in the 'Markers' table.");
+            console.log(`No existing foreign key found on column '${columnName}' in table '${tableName}'. Adding new one with ON DELETE CASCADE.`);
+
+            // Si aucune clé étrangère n'existe, en créer une nouvelle directement
+            await connection.query(`
+                ALTER TABLE ${tableName}
+                ADD CONSTRAINT fk_${tableName}_${columnName}
+                FOREIGN KEY (${columnName}) REFERENCES ${referencedTable}(${referencedColumn}) ON DELETE CASCADE;
+            `);
         }
     } catch (error) {
-        console.error("Error adding 'blocked' column to 'Markers' table: ", error);
+        console.error(`Error updating foreign key for column '${columnName}' in table '${tableName}':`, error);
         throw error;
     } finally {
         connection.release();
     }
 };
 
+export const updateDatabaseForeignKeys = async (): Promise<void> => {
+    try {
+        // Mise à jour des FOREIGN KEY dans la table 'followers'
+        await updateForeignKeyWithCascade('followers', 'user_id', 'users', 'id');
+        await updateForeignKeyWithCascade('followers', 'follower_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'followings'
+        await updateForeignKeyWithCascade('followings', 'user_id', 'users', 'id');
+        await updateForeignKeyWithCascade('followings', 'following_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'Markers'
+        await updateForeignKeyWithCascade('Markers', 'user_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'MarkerImages'
+        await updateForeignKeyWithCascade('MarkerImages', 'marker_id', 'Markers', 'id');
+        await updateForeignKeyWithCascade('MarkerImages', 'user_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'MarkerComments'
+        await updateForeignKeyWithCascade('MarkerComments', 'marker_id', 'Markers', 'id');
+        await updateForeignKeyWithCascade('MarkerComments', 'user_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'ActiveUsers'
+        await updateForeignKeyWithCascade('ActiveUsers', 'user_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'UserPushTokens'
+        await updateForeignKeyWithCascade('UserPushTokens', 'user_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'MarkerRatings'
+        await updateForeignKeyWithCascade('MarkerRatings', 'marker_id', 'Markers', 'id');
+
+         // Mise à jour des FOREIGN KEY dans la table 'PasswordResetTokens'
+         await updateForeignKeyWithCascade('PasswordResetTokens', 'user_id', 'users', 'id');
+
+        // Mise à jour des FOREIGN KEY dans la table 'notifications'
+        await updateForeignKeyWithCascade('notifications', 'receiver_user_id', 'users', 'id');
+        await updateForeignKeyWithCascade('notifications', 'sender_user_id', 'users', 'id');
+
+        console.log('Foreign keys updated successfully with ON DELETE CASCADE.');
+    } catch (error) {
+        console.error('Error updating foreign keys with ON DELETE CASCADE: ', error);
+    }
+};
 
 
+
+
+// Fonction d'initialisation de la base de données
 export const initializeDatabase = async (): Promise<void> => {
     const connection = await pool.getConnection();
     try {
@@ -258,11 +301,11 @@ export const initializeDatabase = async (): Promise<void> => {
         const notificationsTableExists = await checkTableExists('notifications');
         const announcementsTableExists = await checkTableExists('announcements');
         const activeUsersTableExists = await checkTableExists('ActiveUsers');
+
         if (!usersTableExists) {
             await connection.query(createUsersTable);
             console.log("Users table created successfully");
         } else {
-            // await addRoleColumnToUsersTable();
             console.log("Users table already exists");
         }
 
@@ -305,7 +348,6 @@ export const initializeDatabase = async (): Promise<void> => {
             await connection.query(createMarkersTable);
             console.log("Markers table created successfully");
         } else {
-            // await addBlockedColumnToMarkersTable()
             console.log("Markers table already exists");
         }
 
@@ -343,6 +385,7 @@ export const initializeDatabase = async (): Promise<void> => {
         } else {
             console.log("Notifications table already exists");
         }
+
         if (!announcementsTableExists) {
             await connection.query(createAnnouncementsTable);
             console.log("Announcements table created successfully");
@@ -356,6 +399,9 @@ export const initializeDatabase = async (): Promise<void> => {
         } else {
             console.log("ActiveUsers table already exists");
         }
+
+        // Appel de la mise à jour des clés étrangères après l'initialisation des tables
+        await updateDatabaseForeignKeys();
 
         console.log("Database initialized successfully");
     } catch (error) {
