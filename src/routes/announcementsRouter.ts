@@ -12,8 +12,8 @@ const announcementsRouter = Router();
 // Routes pour les annonces
 announcementsRouter.post('/add', authenticateTokenAdmin,InserUserActif,validateAnnouncement, addAnnouncement);
 announcementsRouter.get('/', authenticateToken,InserUserActif, getAnnouncements);
-announcementsRouter.get('/:id', authenticateToken, InserUserActif,getAnnouncementById);  // Nouvelle route pour obtenir une annonce par ID
-announcementsRouter.put('/update/:id', authenticateTokenAdmin,InserUserActif, updateAnnouncement);
+announcementsRouter.get('/:id', authenticateToken, InserUserActif,getAnnouncementById);
+announcementsRouter.put('/update/:id', authenticateTokenAdmin,InserUserActif,validateAnnouncement,updateAnnouncement);
 announcementsRouter.delete('/:id', authenticateTokenAdmin,InserUserActif, deleteAnnouncement);
 
 export default announcementsRouter;

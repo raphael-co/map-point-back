@@ -7,7 +7,7 @@ const upload = multer().single('announcementFile');
 dotenv.config();
 
 export const validateAnnouncement = (req: Request, res: Response, next: NextFunction) => {
-    const language = req.headers['accept-language'] || 'en';
+    const language = 'en';
 
     upload(req, res, (err) => {
         if (err) {
@@ -16,6 +16,7 @@ export const validateAnnouncement = (req: Request, res: Response, next: NextFunc
                 message: getTranslation('FILE_UPLOAD_ERROR', language, 'middleweares', 'announcementMiddleware')
             });
         }
+        console.log("File details:", req.file);
 
         let { title } = req.body;
 
@@ -33,6 +34,8 @@ export const validateAnnouncement = (req: Request, res: Response, next: NextFunc
         if (!req.file) {
             return res.status(400).json({ status: 'error', message: getTranslation('FILE_REQUIRED', language, 'middleweares', 'announcementMiddleware') });
         }
+
+        
         // Nettoyage des données
         req.body.title = title;
 

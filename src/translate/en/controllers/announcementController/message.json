@@ -1,0 +1,13 @@
+{
+    "FILE_MISSING": "File is missing",
+    "ANNOUNCEMENT_ADDED_SUCCESS": "Announcement added successfully",
+    "INTERNAL_SERVER_ERROR": "Internal server error",
+    "ANNOUNCEMENT_NOT_FOUND": "Announcement not found",
+    "UNAUTHORIZED": "You are not authorized to perform this action",
+    "ANNOUNCEMENT_UPDATED_SUCCESS": "Announcement updated successfully",
+    "ANNOUNCEMENT_DELETED_SUCCESS": "Announcement deleted successfully",
+    "FILE_UPLOAD_ERROR": "Error occurred during file upload",
+    "TITLE_REQUIRED": "Title is required",
+    "TITLE_TOO_LONG": "Title exceeds the maximum allowed length",
+    "FILE_REQUIRED": "File is required for the announcement"
+}

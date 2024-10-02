@@ -8,7 +8,7 @@ import getTranslation from '../utils/translate';  // Fonction de traduction
 
 export const addAnnouncement = async (req: Request, res: Response) => {
     const { title } = req.body;
-    const language = req.headers['accept-language'] || 'en';
+    const language =  'en';
     const author_id = req.user?.id;
     try {
         const connection = await pool.getConnection();
@@ -19,6 +19,8 @@ export const addAnnouncement = async (req: Request, res: Response) => {
         // Stocker le fichier Markdown en tant que BLOB
         const fileBuffer = req.file.buffer; 
 
+        console.log(`File buffer: ${fileBuffer}`);
+        
         await connection.query(
             'INSERT INTO announcements (title, content, author_id) VALUES (?, ?, ?)',
             [title, fileBuffer, author_id]
@@ -54,31 +56,31 @@ export const getAnnouncements = async (req: Request, res: Response) => {
 // Mettre à jour une annonce
 export const updateAnnouncement = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { title, content } = req.body;
-    const authorId = req.user?.id;
+    const { title } = req.body;
     const language = req.headers['accept-language'] || 'en';
 
     try {
         const connection = await pool.getConnection();
-        const [rows] = await connection.query<RowDataPacket[]>(
-            'SELECT author_id FROM announcements WHERE id = ?',
-            [id]
-        );
 
-        if (rows.length === 0) {
-            connection.release();
-            return res.status(404).json({ message: getTranslation('ANNOUNCEMENT_NOT_FOUND', language, 'controllers', 'announcementController') });
+        // Vérifier si un fichier est envoyé
+        let fileBuffer;
+        if (req.file) {
+            fileBuffer = req.file.buffer; // Si un fichier est envoyé, on récupère son buffer
+        } else {
+            // Récupérer l'ancien contenu de la base de données si aucun fichier n'est envoyé
+            const [existingContentRows] = await connection.query<RowDataPacket[]>(
+                'SELECT content FROM announcements WHERE id = ?',
+                [id]
+            );
+            fileBuffer = existingContentRows[0].content; // Utiliser le contenu existant
         }
 
-        if (rows[0].author_id !== authorId) {
-            connection.release();
-            return res.status(403).json({ message: getTranslation('UNAUTHORIZED', language, 'controllers', 'announcementController') });
-        }
-
+        // Mettre à jour le titre et le contenu
         await connection.query(
             'UPDATE announcements SET title = ?, content = ? WHERE id = ?',
-            [title, content, id]
+            [title, fileBuffer, id]
         );
+
         connection.release();
 
         res.status(200).json({ message: getTranslation('ANNOUNCEMENT_UPDATED_SUCCESS', language, 'controllers', 'announcementController') });
@@ -87,6 +89,7 @@ export const updateAnnouncement = async (req: Request, res: Response) => {
         res.status(500).json({ message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'announcementController') });
     }
 };
+
 
 // Supprimer une annonce
 export const deleteAnnouncement = async (req: Request, res: Response) => {
