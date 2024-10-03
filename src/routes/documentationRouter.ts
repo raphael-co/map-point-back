@@ -3,7 +3,7 @@ import { authenticateToken, authenticateTokenAdmin } from '../middleweares/authM
 
 import { InserUserActif } from '../middleweares/usersActif/usersActif';
 import { validateDocumentation } from '../middleweares/documentationMiddlewares';
-import { addDocumentation, deleteDocumentation, deleteDocumentations, getDocumentationById, getDocumentations, updateDocumentation } from '../controllers/documentationController';
+import { addDocumentation, deleteDocumentation, deleteDocumentations, getDocumentationById, getDocumentations, getDocumentationTitles, updateDocumentation } from '../controllers/documentationController';
 
 const documentationRouter = Router();
 
@@ -14,5 +14,6 @@ documentationRouter.get('/:id', authenticateToken, InserUserActif, getDocumentat
 documentationRouter.put('/update/:id', authenticateTokenAdmin, InserUserActif, validateDocumentation, updateDocumentation);
 documentationRouter.delete('/:id', authenticateTokenAdmin, InserUserActif, deleteDocumentation);
 documentationRouter.post('/delete-multiple', authenticateTokenAdmin, InserUserActif, deleteDocumentations);
+documentationRouter.get('/titles', authenticateToken, InserUserActif, getDocumentationTitles);
 
 export default documentationRouter;

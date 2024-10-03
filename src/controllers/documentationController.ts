@@ -248,3 +248,21 @@ export const getDocumentationsWithPagination = async (req: Request, res: Respons
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
+// Récupérer uniquement les titres des documentations
+export const getDocumentationTitles = async (req: Request, res: Response) => {
+    const language = req.headers['accept-language'] || 'en';
+
+    try {
+        const connection = await pool.getConnection();
+        const [titles] = await connection.query<RowDataPacket[]>(
+            'SELECT id, title FROM documentation ORDER BY created_at DESC'
+        );
+        connection.release();
+
+        res.status(200).json(titles);
+    } catch (error) {
+        console.error('Error fetching documentation titles:', error);
+        res.status(500).json({ message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'documentationController') });
+    }
+};
