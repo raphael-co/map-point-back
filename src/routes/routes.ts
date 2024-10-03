@@ -8,6 +8,7 @@ import commentRouter from './commentRouter';
 import notificationRouter from './notificationsRouter';
 import announcementsRouter from './announcementsRouter';
 import adminRouter from './adminRouter';
+import documentationRouter from './documentationRouter';
 
 const routes = Router();
 
@@ -20,6 +21,7 @@ routes.use('/comments', commentRouter);
 routes.use('/notifications', notificationRouter);
 routes.use('/announcements', announcementsRouter);
 routes.use('/admin', adminRouter);
+routes.use('/documentation', documentationRouter);
 routes.get('/test', (req, res) => {
     res.status(200).json({ message: 'is runnig' });
 });
