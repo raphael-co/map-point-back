@@ -1,15 +1,13 @@
-### Exemple de JSON pour les Routes d'Amis
+# Documentation des Routes des Amis
 
-Voici les exemples de JSON pour les différentes routes de gestion des amis.
+## Routes pour les Amis
 
-#### 1. Envoyer une Demande d'Ami
+### 1. Envoyer une Demande d'Ami
 
-**URL**: `http://localhost:3000/api/friends/send-request`
-
-**Méthode**: POST
-
-**Headers**:
-- Authorization: Bearer `your_jwt_token`
+**URL**: `http://localhost:3000/api/friends/send-request`  
+**Méthode**: POST  
+**Headers**:  
+- Authorization: Bearer `<token>`  
 - Content-Type: application/json
 
 **Corps**:
@@ -20,7 +18,7 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
 }
 ```
 
-#### Réponse Possible:
+**Réponse Possible**:
 
 ```json
 {
@@ -29,14 +27,14 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
 }
 ```
 
-#### 2. Accepter une Demande d'Ami
+---
 
-**URL**: `http://localhost:3000/api/friends/accept-request`
+### 2. Accepter une Demande d'Ami
 
-**Méthode**: POST
-
-**Headers**:
-- Authorization: Bearer `your_jwt_token`
+**URL**: `http://localhost:3000/api/friends/accept-request`  
+**Méthode**: POST  
+**Headers**:  
+- Authorization: Bearer `<token>`  
 - Content-Type: application/json
 
 **Corps**:
@@ -47,23 +45,23 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
 }
 ```
 
-#### Réponse Possible:
+**Réponse Possible**:
 
 ```json
 {
     "status": "success",
-    "message": "newuser2 can now see your points"
+    "message": "Friend request accepted successfully"
 }
 ```
 
-#### 3. Rejeter une Demande d'Ami
+---
 
-**URL**: `http://localhost:3000/api/friends/reject-request`
+### 3. Rejeter une Demande d'Ami
 
-**Méthode**: POST
-
-**Headers**:
-- Authorization: Bearer `your_jwt_token`
+**URL**: `http://localhost:3000/api/friends/reject-request`  
+**Méthode**: DELETE  
+**Headers**:  
+- Authorization: Bearer `<token>`  
 - Content-Type: application/json
 
 **Corps**:
@@ -74,23 +72,23 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
 }
 ```
 
-#### Réponse Possible:
+**Réponse Possible**:
 
 ```json
 {
     "status": "success",
-    "message": "Friend request rejected and deleted"
+    "message": "Friend request rejected successfully"
 }
 ```
 
-#### 4. Lister les Abonnements (Followings)
+---
 
-**URL**: `http://localhost:3000/api/friends/following/:userId`
+### 4. Lister les Suivis (Following)
 
-**Méthode**: GET
-
-**Headers**:
-- Authorization: Bearer `your_jwt_token`
+**URL**: `http://localhost:3000/api/friends/listFollowing/:userId`  
+**Méthode**: GET  
+**Headers**:  
+- Authorization: Bearer `<token>`
 
 **Réponse Possible**:
 
@@ -99,27 +97,25 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
     "status": "success",
     "following": [
         {
-            "id": 2,
-            "username": "newuser2",
-            "email": "newuser2@example.com",
+            "id": 1,
+            "username": "user1",
             "gender": "male",
-            "joined_at": "2024-07-16T18:11:48.000Z",
-            "last_login": "2024-07-16T18:11:48.000Z",
-            "followed_at": "2024-07-16T18:31:21.000Z",
-            "friend_since": "07/16/2024"
+            "last_login": "2023-10-01T12:00:00Z",
+            "followed_at": "2023-09-30T12:00:00Z",
+            "status": "accepted"
         }
     ]
 }
 ```
 
-#### 5. Lister les Abonnés (Followers)
+---
 
-**URL**: `http://localhost:3000/api/friends/followers/:userId`
+### 5. Lister les Suiveurs (Followers)
 
-**Méthode**: GET
-
-**Headers**:
-- Authorization: Bearer `your_jwt_token`
+**URL**: `http://localhost:3000/api/friends/listFollowers/:userId`  
+**Méthode**: GET  
+**Headers**:  
+- Authorization: Bearer `<token>`
 
 **Réponse Possible**:
 
@@ -128,27 +124,25 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
     "status": "success",
     "followers": [
         {
-            "id": 3,
-            "username": "followerUser",
-            "email": "follower@example.com",
+            "id": 2,
+            "username": "user2",
             "gender": "female",
-            "joined_at": "2024-07-16T18:12:48.000Z",
-            "last_login": "2024-07-16T18:13:48.000Z",
-            "followed_at": "2024-07-16T18:32:21.000Z",
-            "friend_since": "07/16/2024"
+            "last_login": "2023-10-02T14:00:00Z",
+            "followed_at": "2023-09-30T12:00:00Z",
+            "status": "accepted"
         }
     ]
 }
 ```
 
-#### 6. Lister les Demandes d'Amis en Attente
+---
 
-**URL**: `http://localhost:3000/api/friends/friend-requests`
+### 6. Lister les Demandes d'Ami en Attente
 
-**Méthode**: GET
-
-**Headers**:
-- Authorization: Bearer `your_jwt_token`
+**URL**: `http://localhost:3000/api/friends/friend-requests`  
+**Méthode**: GET  
+**Headers**:  
+- Authorization: Bearer `<token>`
 
 **Réponse Possible**:
 
@@ -157,25 +151,27 @@ Voici les exemples de JSON pour les différentes routes de gestion des amis.
     "status": "success",
     "friendRequests": [
         {
-            "id": 4,
-            "username": "requestingUser",
-            "email": "requestinguser@example.com",
+            "id": 3,
+            "username": "user3",
+            "email": "user3@example.com",
             "gender": "other",
-            "joined_at": "2024-07-16T18:14:48.000Z",
-            "last_login": "2024-07-16T18:15:48.000Z",
-            "requested_at": "2024-07-16T18:33:21.000Z"
+            "joined_at": "2023-09-20T10:00:00Z",
+            "last_login": "2023-10-01T12:00:00Z",
+            "requested_at": "2023-09-30T12:00:00Z"
         }
     ]
 }
 ```
 
-### Explications
+---
 
-1. **Envoyer une Demande d'Ami**: Utilise l'ID de l'ami à qui la demande est envoyée.
-2. **Accepter une Demande d'Ami**: Utilise l'ID de l'ami dont la demande est acceptée.
-3. **Rejeter une Demande d'Ami**: Utilise l'ID de l'ami dont la demande est rejetée.
-4. **Lister les Abonnements**: Retourne une liste des utilisateurs suivis par l'utilisateur courant avec des détails.
-5. **Lister les Abonnés**: Retourne une liste des utilisateurs qui suivent l'utilisateur courant avec des détails.
-6. **Lister les Demandes d'Amis**: Retourne une liste des demandes d'amis en attente pour l'utilisateur courant avec des détails.
+# Explications Générales
 
-Ces JSON fournissent les structures nécessaires pour tester vos différentes routes de gestion des amis avec des exemples concrets.
+1. **Envoyer une Demande d'Ami**: Un utilisateur authentifié peut envoyer une demande d'ami à un autre utilisateur. Si une demande est déjà en attente ou si l'utilisateur est déjà suivi, une erreur sera renvoyée.
+2. **Accepter une Demande d'Ami**: L'utilisateur peut accepter une demande d'ami en attente.
+3. **Rejeter une Demande d'Ami**: L'utilisateur peut rejeter une demande d'ami en attente.
+4. **Lister les Suivis**: Permet de récupérer la liste des utilisateurs suivis par un utilisateur donné.
+5. **Lister les Suiveurs**: Permet de récupérer la liste des utilisateurs qui suivent un utilisateur donné.
+6. **Lister les Demandes d'Ami en Attente**: Permet de récupérer la liste des demandes d'ami en attente pour l'utilisateur authentifié.
+
+Chaque route nécessite un jeton JWT valide à passer dans le header d'autorisation pour authentifier l'utilisateur.

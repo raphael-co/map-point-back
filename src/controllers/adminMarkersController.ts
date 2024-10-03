@@ -24,7 +24,7 @@ export const getAllMarkersPaginationAdmin = async (req: Request, res: Response):
     const searchTerm = `%${search}%`;
 
     // Assurer que les paramètres de tri soient valides
-    const validSortColumns = ['id','user_id', 'title', ,'description','type' ,'blocked','latitude', 'longitude', 'visibility', 'created_at'];
+    const validSortColumns = ['id', 'user_id', 'title', , 'description', 'type', 'blocked', 'latitude', 'longitude', 'visibility', 'created_at'];
     const validSortOrders = ['ASC', 'DESC'];
 
     const orderByColumn = validSortColumns.includes(sortColumn as string) ? sortColumn : 'created_at';
@@ -152,7 +152,7 @@ export const deleteMarkerAdmin = async (req: Request, res: Response): Promise<vo
         );
 
         console.log('images', images);
-        
+
         for (const image of images) {
             const publicId = image.image_url.split('/').pop()?.split('.')[0];
             if (publicId) {
@@ -161,7 +161,7 @@ export const deleteMarkerAdmin = async (req: Request, res: Response): Promise<vo
         }
 
         const [result]: [ResultSetHeader, any] = await connection.query(
-            `DELETE FROM Markers WHERE id = ?`, 
+            `DELETE FROM Markers WHERE id = ?`,
             [id]
         );
 
@@ -175,6 +175,51 @@ export const deleteMarkerAdmin = async (req: Request, res: Response): Promise<vo
         res.json({ message: 'Marker deleted successfully' });
     } catch (error) {
         console.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const deleteMultipleMarkersAdmin = async (req: Request, res: Response): Promise<void> => {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ message: 'Invalid or empty IDs array' });
+        return;
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Récupérer les images associées aux markers à supprimer
+        const [images] = await connection.query<RowDataPacket[]>(
+            `SELECT id, image_url FROM MarkerImages WHERE marker_id IN (?)`,
+            [ids]
+        );
+
+        // Supprimer les images de Cloudinary pour chaque marker
+        for (const image of images) {
+            const publicId = image.image_url.split('/').pop()?.split('.')[0];
+            if (publicId) {
+                await cloudinary.v2.uploader.destroy(`mapPoint/markers/${publicId}`);
+            }
+        }
+
+        // Supprimer les markers
+        const [result]: [ResultSetHeader, any] = await connection.query(
+            `DELETE FROM Markers WHERE id IN (?)`,
+            [ids]
+        );
+
+        connection.release();
+
+        if (result.affectedRows === 0) {
+            res.status(404).json({ message: 'No markers were deleted, they may not exist.' });
+            return;
+        }
+
+        res.json({ message: `${result.affectedRows} markers deleted successfully` });
+    } catch (error) {
+        console.error('Error deleting markers:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

@@ -6,7 +6,8 @@ import { getActiveUsersAdmin, getActiveUsersByMonthAndYear, getNewUsersAdmin, ge
 import { InserUserActif } from "../middleweares/usersActif/usersActif";
 import { getBlockedMarkersAdmin, getCommentsByMonthAndYear, getCommentsByPeriod, getMarkersByMonthAndYear, getMarkersByPeriod, getTotalMarkersAdmin } from "../controllers/statMarkersController";
 import { deleteUserAdmin, getAllUsersAdmin, getUserByIdAdmin, updateUserBlockedStatusAdmin, updateUserRoleAdmin } from "../controllers/adminUsersController";
-import { deleteMarkerAdmin, getAllMarkersPaginationAdmin } from "../controllers/adminMarkersController";
+import { deleteMarkerAdmin, deleteMultipleMarkersAdmin, getAllMarkersPaginationAdmin } from "../controllers/adminMarkersController";
+import { getAnnouncementsWithPagination } from "../controllers/announcementController";
 
 const adminRouter = Router();
 
@@ -17,6 +18,7 @@ adminRouter.patch('/markers/blocked', authenticateTokenAdmin, updateMarkerBlocke
 adminRouter.put('/update/:id', authenticateTokenAdmin, validateUpdateMarkerAdmin, updateMarkerAdmin);
 adminRouter.get('/markers/:id', authenticateTokenAdmin, getMarkersByIdAdmin);
 adminRouter.delete('/markers/:id', authenticateTokenAdmin, deleteMarkerAdmin);
+adminRouter.post('/markers/delete-multiple', authenticateTokenAdmin, deleteMultipleMarkersAdmin);
 
 // Routes pour les utilisateurs
 adminRouter.get('/users', authenticateTokenAdmin, getAllUsersAdmin);
@@ -24,6 +26,9 @@ adminRouter.get('/users/:id', authenticateTokenAdmin, getUserByIdAdmin);
 adminRouter.patch('/users/:id/role', authenticateTokenAdmin, updateUserRoleAdmin);
 adminRouter.patch('/users/:id/blocked', authenticateTokenAdmin, updateUserBlockedStatusAdmin);
 adminRouter.delete('/users/:id', authenticateTokenAdmin, deleteUserAdmin);
+
+adminRouter.get('/announcements', authenticateTokenAdmin, getAnnouncementsWithPagination);
+
 
 // Routes pour les statistiques des utilisateurs
 adminRouter.get('/stats/total-users', authenticateTokenAdmin, getTotalUsersAdmin);

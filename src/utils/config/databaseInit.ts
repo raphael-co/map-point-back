@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     author_id INT NOT NULL,
-    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (author_id) REFERENCES users(id)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
 
@@ -187,6 +187,18 @@ CREATE TABLE IF NOT EXISTS ActiveUsers (
     month INT NOT NULL,
     UNIQUE KEY unique_active_user (user_id, year, month),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
+
+const createDocumentationTable = `
+CREATE TABLE IF NOT EXISTS documentation (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content LONGBLOB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    author_id INT NOT NULL,
+    FOREIGN KEY (author_id) REFERENCES users(id)
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `;
 
@@ -301,6 +313,7 @@ export const initializeDatabase = async (): Promise<void> => {
         const notificationsTableExists = await checkTableExists('notifications');
         const announcementsTableExists = await checkTableExists('announcements');
         const activeUsersTableExists = await checkTableExists('ActiveUsers');
+        const documentationTableExists = await checkTableExists('documentation');
 
         if (!usersTableExists) {
             await connection.query(createUsersTable);
@@ -398,6 +411,13 @@ export const initializeDatabase = async (): Promise<void> => {
             console.log("ActiveUsers table created successfully");
         } else {
             console.log("ActiveUsers table already exists");
+        }
+
+        if (!documentationTableExists) {
+            await connection.query(createDocumentationTable);
+            console.log("Documentation table created successfully");
+        } else {
+            console.log("Documentation table already exists");
         }
 
         // Appel de la mise à jour des clés étrangères après l'initialisation des tables
