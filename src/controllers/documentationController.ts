@@ -174,7 +174,29 @@ export const getDocumentationById = async (req: Request, res: Response) => {
         connection.release();
 
         if (documentation.length === 0) {
-            return res.status(404).json({ status: 'error', message: getTranslation('DOCUMENTATION_NOT_FOUND', language, 'controllers', 'documentationController') });
+            return res.status(404).json({ status: 'error', message: getTranslation('', language, 'controllers', 'documentationController') });
+        }
+
+        res.status(200).json(documentation[0]);
+    } catch (error) {
+        console.error('Error fetching documentation:', error);
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'documentationController') });
+    }
+};
+
+export const getDocumentationByTitle = async (req: Request, res: Response) => {
+    const { title } = req.params;
+    const language = req.headers['accept-language'] || 'en';
+
+    try {
+        const connection = await pool.getConnection();
+        const [documentation] = await connection.query<RowDataPacket[]>(
+            'SELECT * FROM documentation WHERE title = ?', [title]
+        );
+        connection.release();
+
+        if (documentation.length === 0) {
+            return res.status(404).json({ status: 'error', message: getTranslation('', language, 'controllers', 'documentationController') });
         }
 
         res.status(200).json(documentation[0]);
