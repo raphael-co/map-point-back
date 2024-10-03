@@ -4,7 +4,7 @@
 
 ### 1. Envoyer une Demande d'Ami
 
-**URL**: `http://localhost:3000/api/friends/send-request`  
+**URL**: `https://map-point.netgraph.fr/api/friends/send-request`  
 **Méthode**: POST  
 **Headers**:  
 - Authorization: Bearer `<token>`  
@@ -31,7 +31,7 @@
 
 ### 2. Accepter une Demande d'Ami
 
-**URL**: `http://localhost:3000/api/friends/accept-request`  
+**URL**: `https://map-point.netgraph.fr/api/friends/accept-request`  
 **Méthode**: POST  
 **Headers**:  
 - Authorization: Bearer `<token>`  
@@ -58,7 +58,7 @@
 
 ### 3. Rejeter une Demande d'Ami
 
-**URL**: `http://localhost:3000/api/friends/reject-request`  
+**URL**: `https://map-point.netgraph.fr/api/friends/reject-request`  
 **Méthode**: DELETE  
 **Headers**:  
 - Authorization: Bearer `<token>`  
@@ -85,7 +85,7 @@
 
 ### 4. Lister les Suivis (Following)
 
-**URL**: `http://localhost:3000/api/friends/listFollowing/:userId`  
+**URL**: `https://map-point.netgraph.fr/api/friends/listFollowing/:userId`  
 **Méthode**: GET  
 **Headers**:  
 - Authorization: Bearer `<token>`
@@ -112,7 +112,7 @@
 
 ### 5. Lister les Suiveurs (Followers)
 
-**URL**: `http://localhost:3000/api/friends/listFollowers/:userId`  
+**URL**: `https://map-point.netgraph.fr/api/friends/listFollowers/:userId`  
 **Méthode**: GET  
 **Headers**:  
 - Authorization: Bearer `<token>`
@@ -139,7 +139,7 @@
 
 ### 6. Lister les Demandes d'Ami en Attente
 
-**URL**: `http://localhost:3000/api/friends/friend-requests`  
+**URL**: `https://map-point.netgraph.fr/api/friends/friend-requests`  
 **Méthode**: GET  
 **Headers**:  
 - Authorization: Bearer `<token>`
