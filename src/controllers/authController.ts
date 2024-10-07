@@ -106,24 +106,29 @@ export const loginController = async (req: Request, res: Response) => {
     try {
         const connection = await pool.getConnection();
         const [rows] = await connection.query<RowDataPacket[]>('SELECT * FROM users WHERE email = ?', [emailAddresses]);
-        connection.release();
 
         if (rows.length === 0) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language,'controllers','authController') });
+            connection.release();
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language, 'controllers', 'authController') });
         }
 
         const user = rows[0];
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language,'controllers','authController') });
+            connection.release();
+            return res.status(400).json({ status: 'error', message: getTranslation('INVALID_CREDENTIALS', language, 'controllers', 'authController') });
         }
+
+        // Mise à jour du champ `last_login` avec la date et heure actuelle
+        await connection.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+        connection.release();
 
         const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, SECRET_KEY);
 
         res.status(200).json({ status: 'success', token });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language,'controllers','authController') });
+        res.status(500).json({ status: 'error', message: getTranslation('INTERNAL_SERVER_ERROR', language, 'controllers', 'authController') });
     }
 };
 
